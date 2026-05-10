@@ -1,0 +1,3 @@
+# Valores de las monedas
+VALOR_MONEDA_NORMAL = 5
+VALOR_MONEDA_ESPECIAL = 10
