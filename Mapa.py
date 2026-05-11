@@ -3,8 +3,6 @@ import random
 from Config import CELDA_LIBRE, CELDA_OBSTACULO, PORCENTAJE_OBSTACULOS
 from Elementos import VALOR_MONEDA_ESPECIAL, VALOR_MONEDA_NORMAL
 from Utilidades import TIPO_BOMBA, TIPO_PASO_FANTASMA
-
-
 TIPO_MONEDA_NORMAL = "moneda_normal"
 TIPO_MONEDA_ESPECIAL = "moneda_especial"
 
@@ -96,3 +94,27 @@ class Mapa:
             jugador.puntaje += VALOR_MONEDA_ESPECIAL
 
         return tipo
+    
+    
+    def crear_fila(self):
+        nueva_fila = []
+
+        for columna in range(self.tamano):
+            if random.random() > PORCENTAJE_OBSTACULOS:
+                nueva_fila.append(CELDA_LIBRE)
+            else:
+                nueva_fila.append(CELDA_OBSTACULO)
+
+        return nueva_fila
+
+    def desplazar(self):
+        self.celdas.insert(0, self.crear_fila())
+        self.celdas.pop()
+
+        elementos_desplazados = {}
+        for (fila, columna), tipo in self.elementos.items():
+            nueva_fila = fila + 1
+            if nueva_fila < self.tamano:
+                elementos_desplazados[(nueva_fila, columna)] = tipo
+
+        self.elementos = elementos_desplazados

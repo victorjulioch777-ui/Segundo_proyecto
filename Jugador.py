@@ -1,8 +1,10 @@
+
+
 class Jugador:
     """
     Guarda la posicion y el puntaje del jugador dentro del mapa.
     """
-
+    
     def __init__(self, fila, columna):
         self.fila = fila
         self.columna = columna

@@ -42,6 +42,7 @@ mensaje_juego = ""
 pasos_fantasma = 0
 paso_fantasma_activo = False
 bombas_disponibles = 0
+ultimo_desplazamiento = 0
 
 
 def color_hex(valor):
@@ -179,6 +180,20 @@ def dibujar_puntajes():
     boton_volver.dibujar(pantalla)
 
 
+def dibujar_perdiste():
+    dibujar_fondo(pantalla)
+    dibujar_texto_con_sombra(pantalla, "PERDISTE", fuente_titulo, BLANCO, (ANCHO // 2, 170))
+
+    texto = fuente_subtitulo.render("El mapa elimino la fila donde estabas.", True, NARANJA)
+    pantalla.blit(texto, texto.get_rect(center=(ANCHO // 2, 300)))
+
+    puntaje = 0 if jugador is None else jugador.puntaje
+    texto_puntaje = fuente_subtitulo.render(f"Puntaje final: {puntaje}", True, BLANCO)
+    pantalla.blit(texto_puntaje, texto_puntaje.get_rect(center=(ANCHO // 2, 370)))
+
+    boton_volver.dibujar(pantalla)
+
+
 def iniciar_partida():
     global estado_pantalla
     global mapa_actual
@@ -187,12 +202,14 @@ def iniciar_partida():
     global pasos_fantasma
     global paso_fantasma_activo
     global bombas_disponibles
+    global ultimo_desplazamiento
 
     mapa_actual = Mapa(tamano_mapa)
     jugador = Jugador(tamano_mapa - 1, tamano_mapa // 2)
     pasos_fantasma = 0
     paso_fantasma_activo = False
     bombas_disponibles = 0
+    ultimo_desplazamiento = pygame.time.get_ticks()
     mensaje_juego = "Flechas/WASD para moverte. Q usa fantasma. E usa bomba."
     estado_pantalla = "juego"
 
@@ -390,12 +407,22 @@ def manejar_evento(evento):
         if boton_volver.fue_presionado(evento):
             estado_pantalla = "menu"
 
+    elif estado_pantalla == "perdiste":
+        if boton_volver.fue_presionado(evento):
+            estado_pantalla = "menu"
+
     return True
 
 
 def iniciar_interfaz():
+    global estado_pantalla
+    global mensaje_juego
+    global ultimo_desplazamiento
+    
     inicializar_pygame()
     ejecutando = True
+
+    intervalo_desplazamiento = 2000
 
     while ejecutando:
         for evento in pygame.event.get():
@@ -412,8 +439,25 @@ def iniciar_interfaz():
             dibujar_configuracion()
         elif estado_pantalla == "puntajes":
             dibujar_puntajes()
+        elif estado_pantalla == "perdiste":
+            dibujar_perdiste()
         elif estado_pantalla == "juego":
-            dibujar_juego()
+            tiempo_actual = pygame.time.get_ticks()
+
+            if tiempo_actual - ultimo_desplazamiento >= intervalo_desplazamiento:
+                if jugador.fila == mapa_actual.tamano - 1:
+                    guardar_puntaje(tamano_mapa, jugador.puntaje)
+                    mensaje_juego = "Perdiste. El mapa elimino la fila donde estabas."
+                    estado_pantalla = "perdiste"
+                else:
+                    mapa_actual.desplazar()
+                    jugador.fila += 1
+
+                ultimo_desplazamiento = tiempo_actual
+
+            if estado_pantalla == "juego":
+                dibujar_juego()
+
 
         pygame.display.flip()
         reloj.tick(60)
