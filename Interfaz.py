@@ -1,5 +1,8 @@
 import pygame
 
+from Juego import Juego
+from Puntajes import guardar_puntaje, obtener_puntajes
+
 from Config import (
     CELDA_OBSTACULO,
     COLOR_BOMBA,
@@ -16,9 +19,6 @@ from Config import (
     TIPO_MONEDA_NORMAL,
     TIPO_PASO_FANTASMA,
 )
-from Juego import Juego
-from Puntajes import guardar_puntaje, obtener_puntajes
-
 
 ANCHO = 1000
 ALTO = 800
@@ -43,7 +43,6 @@ mapa_actual = None
 jugador = None
 mensaje_juego = ""
 pasos_fantasma = 0
-paso_fantasma_activo = False
 bombas_disponibles = 0
 ultimo_desplazamiento = 0
 control_en_edicion = None
@@ -60,13 +59,16 @@ CONTROLES = {
 
 
 def color_hex(valor):
+    """
+    Se encarga de convertir un color en formato hexadecimal a un color de Pygame.
+    """
     return pygame.Color(valor)
 
 
 def calcular_transformacion_lienzo():
     """
     Calcula la escala del lienzo virtual dentro de la ventana.
-    Usa escalas independientes en X e Y para llenar toda la ventana.
+    Se encarga de usar escalas independientes en X y en Y para llenar la pantalla.
     """
     if ventana is None:
         return (1, 1), (0, 0)
@@ -100,8 +102,9 @@ def obtener_posicion_mouse_lienzo():
 
 def presentar_pantalla():
     """
-    Escala el lienzo virtual para llenar toda la ventana.
-    """
+    Se encarga de escalar la ventana del lienzo virtual a la ventana real,
+    manteniendo la relación del aspecto y llenando toda la pantalla sin importar su tamaño.  
+    """ 
     global escala_lienzo
     global desplazamiento_lienzo
 
@@ -126,6 +129,7 @@ CELESTE = (120, 220, 255)
 CAFE = (145, 90, 45)
 MARRON = (115, 65, 35)
 
+#Son las características visuales de cada tipo de mapa, incluyendo colores para el piso, muros, bloques y bordes.
 ESTILOS_MAPA = {
     "piedra": {
         "nombre": "MAPA PIEDRA",
@@ -153,12 +157,30 @@ ESTILOS_MAPA = {
 
 class Boton:
     def __init__(self, x, y, ancho, alto, texto, color, color_hover):
+        """Esta clase representa un boton interactivo,
+        que puede ser presionado con el mouse y cambia de color al pasar por encima. 
+
+        Args:
+            x (_type_): x del boton en el lienzo virtual
+            y (_type_): y del boton en el lienzo virtual
+            ancho (_type_): Ancho del boton 
+            alto (_type_): Alto del boton
+            texto (_type_): Texto que se muestra dentro del boton
+            color (_type_): Color del boton 
+            color_hover (_type_): Color del boton cuando el mouse esta por encima
+        """
         self.rect = pygame.Rect(x, y, ancho, alto)
         self.texto = texto
         self.color = color
         self.color_hover = color_hover
 
     def dibujar(self, superficie):
+        """Se encarga de dibujar el boton en la superficie dada,
+        usando el color hover si el mouse esta por encima.
+
+        Args:
+            superficie (_type_): Superficie de Pygame donde se dibuja el boton
+        """
         posicion_mouse = obtener_posicion_mouse_lienzo()
         color_actual = self.color_hover if self.rect.collidepoint(posicion_mouse) else self.color
 
@@ -170,12 +192,22 @@ class Boton:
         superficie.blit(texto_render, texto_rect)
 
     def fue_presionado(self, evento):
+        """Se encarga de determinar si el boton fue presionado.
+
+        Args:
+            evento (_type_): Evento de pygame. 
+
+        Returns:
+            _type_: Retorna un booleano si el boton fue presionado.
+        """
         if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
             return self.rect.collidepoint(posicion_en_lienzo(evento.pos))
         return False
 
 
 def inicializar_pygame():
+    """Se encarga de inicializar Pygame y todos sus componentes.
+    """
     global ventana
     global pantalla
     global reloj
@@ -186,9 +218,13 @@ def inicializar_pygame():
     global fuente_texto_pequena
 
     pygame.init()
+    
+    # Se encarga de permitir que al mantener presionada una tecla, se repita la acción cada cierto tiempo.
+    pygame.key.set_repeat(200, 70)
+    
     ventana = pygame.display.set_mode((ANCHO, ALTO), pygame.RESIZABLE)
     pantalla = pygame.Surface((ANCHO, ALTO))
-    pygame.display.set_caption("Laberinto Dinamico")
+    pygame.display.set_caption("Laberinto Dinámico")
     reloj = pygame.time.Clock()
 
     fuente_titulo = pygame.font.SysFont("arialblack", 64)
@@ -247,8 +283,13 @@ def crear_botones():
 
 
 def nombre_tecla(tecla):
-    """
-    Devuelve el nombre visible de una tecla de pygame.
+    """Se encarga de convertir una tecla de Pygame en un nombre más bonito y entendible para mostrarlo en pantalla.
+
+    Args:
+        tecla (_type_): Tipo de tecla de Pygame como por ejemplo pygame.K_w
+
+    Returns:
+        _type_: Nombre de la tecla para mostrar en pantalla 
     """
     nombre = pygame.key.name(tecla).upper()
     if nombre == "SPACE":
@@ -261,8 +302,10 @@ def nombre_tecla(tecla):
 
 
 def resumen_controles_juego():
-    """
-    Construye el texto de controles usando las teclas configuradas.
+    """Se encarga de generar un resumen de los controles configurados para mostrarlos en pantalla.
+
+    Returns:
+        _type_: Retorna un string del resumen de los controles para mostrar en pantalla.
     """
     return (
         f"Mover: {nombre_tecla(CONTROLES['arriba']['tecla'])}/"
@@ -270,11 +313,20 @@ def resumen_controles_juego():
         f"{nombre_tecla(CONTROLES['izquierda']['tecla'])}/"
         f"{nombre_tecla(CONTROLES['derecha']['tecla'])}  "
         f"Bomba: {nombre_tecla(CONTROLES['bomba']['tecla'])}  "
-        f"Fantasma: {nombre_tecla(CONTROLES['fantasma']['tecla'])}"
+        f"Pasos fantasmas: {nombre_tecla(CONTROLES['fantasma']['tecla'])}"
     )
 
 
 def dibujar_texto_con_sombra(superficie, texto, fuente, color, centro):
+    """Se encarga de dibujar un texto con sombra para que asi resalte más.
+
+    Args:
+        superficie (_type_): Superficie de Pygame donde se dibuja el texto.
+        texto (_type_): Texto a dibujar.
+        fuente (_type_): Fuente de Pygame para renderizar el texto.
+        color (_type_): Color del texto.
+        centro (_type_): Centro donde se dibujará el texto en coodenadas del lienzo virtual.
+    """
     sombra = fuente.render(texto, True, NEGRO)
     principal = fuente.render(texto, True, color)
     superficie.blit(sombra, sombra.get_rect(center=(centro[0] + 4, centro[1] + 4)))
@@ -282,18 +334,23 @@ def dibujar_texto_con_sombra(superficie, texto, fuente, color, centro):
 
 
 def dibujar_fondo(superficie):
+    """Esta funcion se encarga de dibujar el fondo de la pantalla.
+
+    Args:
+        superficie (_type_): Superficie de Pygame donde se dibujará el fondo.
+    """
     superficie.fill(color_hex(COLOR_FONDO))
     pygame.draw.circle(superficie, (20, 130, 200), (150, 120), 180)
     pygame.draw.circle(superficie, (15, 90, 150), (850, 680), 220)
-    pygame.draw.polygon(superficie, NEGRO, [(0, 650), (150, 500), (300, 650)])
-    pygame.draw.polygon(superficie, NEGRO, [(250, 650), (430, 470), (600, 650)])
-    pygame.draw.polygon(superficie, NEGRO, [(600, 650), (780, 480), (1000, 650)])
 
 
 def dibujar_menu():
+    """
+    Se encarga de dibujar el menú principal.
+    """
     dibujar_fondo(pantalla)
     dibujar_texto_con_sombra(pantalla, "LABERINTO", fuente_titulo, BLANCO, (ANCHO // 2, 120))
-    dibujar_texto_con_sombra(pantalla, "DINAMICO", fuente_titulo, NARANJA, (ANCHO // 2, 190))
+    dibujar_texto_con_sombra(pantalla, "DINÁMICO", fuente_titulo, NARANJA, (ANCHO // 2, 190))
     boton_iniciar.dibujar(pantalla)
     boton_configuracion.dibujar(pantalla)
     boton_puntajes.dibujar(pantalla)
@@ -301,11 +358,10 @@ def dibujar_menu():
 
 
 def dibujar_configuracion():
-    """
-    Dibuja la pantalla de configuracion de controles.
+    """Se encarga de dibujar el apartado de los controles en configuración.
     """
     dibujar_fondo(pantalla)
-    dibujar_texto_con_sombra(pantalla, "CONFIGURACION", fuente_titulo, BLANCO, (ANCHO // 2, 95))
+    dibujar_texto_con_sombra(pantalla, "CONFIGURACIÓN", fuente_titulo, BLANCO, (ANCHO // 2, 95))
 
     titulo = fuente_subtitulo.render("Controles", True, NARANJA)
     pantalla.blit(titulo, titulo.get_rect(center=(ANCHO // 2, 170)))
@@ -339,9 +395,9 @@ def dibujar_seleccion_tamano():
     Dibuja la pantalla donde el usuario escoge 10x10, 20x20 o 30x30.
     """
     dibujar_fondo(pantalla)
-    dibujar_texto_con_sombra(pantalla, "SELECCIONA EL TAMANO", fuente_titulo, BLANCO, (ANCHO // 2, 145))
+    dibujar_texto_con_sombra(pantalla, "SELECCIONA EL TAMAÑO", fuente_titulo, BLANCO, (ANCHO // 2, 145))
 
-    texto = fuente_texto.render("Elige el tamano del laberinto antes de escoger el estilo.", True, BLANCO)
+    texto = fuente_texto.render("Elige el tamaño del laberinto antes de escoger el estilo.", True, BLANCO)
     pantalla.blit(texto, texto.get_rect(center=(ANCHO // 2, 235)))
 
     for indice, boton in enumerate(botones_tamano):
@@ -387,7 +443,7 @@ def dibujar_seleccion_mapa():
     dibujar_fondo(pantalla)
     dibujar_texto_con_sombra(pantalla, "SELECCIONA EL MAPA", fuente_titulo, BLANCO, (ANCHO // 2, 105))
 
-    texto_tamano = fuente_texto.render(f"Tamano seleccionado: {tamano_mapa} x {tamano_mapa}", True, BLANCO)
+    texto_tamano = fuente_texto.render(f"Tamaño seleccionado: {tamano_mapa} x {tamano_mapa}", True, BLANCO)
     pantalla.blit(texto_tamano, texto_tamano.get_rect(center=(ANCHO // 2, 178)))
 
     posicion_mouse = obtener_posicion_mouse_lienzo()
@@ -416,21 +472,27 @@ def dibujar_seleccion_mapa():
 
 
 def dibujar_puntajes():
+    """
+    Dibuja la pantalla de puntajes.
+    """
     dibujar_fondo(pantalla)
     dibujar_texto_con_sombra(pantalla, "PUNTAJES", fuente_titulo, BLANCO, (ANCHO // 2, 110))
 
     x = 190
     for tamano in TAMANOS_MAPA:
         titulo = fuente_subtitulo.render(f"{tamano} x {tamano}", True, NARANJA)
-        pantalla.blit(titulo, titulo.get_rect(center=(x, 230)))
+        pantalla.blit(titulo, titulo.get_rect(center=(x, 205)))
 
         puntajes = obtener_puntajes(tamano)
         if not puntajes:
             puntajes = [0]
 
-        for indice, puntaje in enumerate(puntajes[:10], start=1):
-            texto = fuente_texto_pequena.render(f"{indice}. {puntaje}", True, BLANCO)
-            pantalla.blit(texto, texto.get_rect(center=(x, 260 + indice * 32)))
+        columnas = [x - 48, x + 58]
+        for indice, puntaje in enumerate(puntajes[:20], start=1):
+            columna = 0 if indice <= 10 else 1
+            fila = indice if indice <= 10 else indice - 10
+            texto = fuente_texto_pequena.render(f"{indice:02d}. {puntaje}", True, BLANCO)
+            pantalla.blit(texto, texto.get_rect(midleft=(columnas[columna], 225 + fila * 32)))
 
         x += 310
 
@@ -438,6 +500,11 @@ def dibujar_puntajes():
 
 
 def dibujar_perdiste():
+    """
+    Se encarga de dibujar y mostrar en pantalla la derrota,
+    que obtuviste en el juego también te muestra el puntaje que logrsate el TOP 20 de lo que 
+    has logrado.
+    """
     dibujar_fondo(pantalla)
     dibujar_texto_con_sombra(pantalla, "PERDISTE", fuente_titulo, BLANCO, (ANCHO // 2, 95))
 
@@ -465,13 +532,15 @@ def dibujar_perdiste():
 
 
 def iniciar_partida():
+    """
+    Se encarga de iniciar una nueva partida.
+    """
     global estado_pantalla
     global juego_actual
     global mapa_actual
     global jugador
     global mensaje_juego
     global pasos_fantasma
-    global paso_fantasma_activo
     global bombas_disponibles
     global ultimo_desplazamiento
 
@@ -482,7 +551,6 @@ def iniciar_partida():
     mapa_actual = juego_actual.mapa
     jugador = juego_actual.jugador
     pasos_fantasma = juego_actual.pasos_fantasma
-    paso_fantasma_activo = False
     bombas_disponibles = juego_actual.bombas
     ultimo_desplazamiento = pygame.time.get_ticks()
     mensaje_juego = juego_actual.mensaje
@@ -515,7 +583,8 @@ def manejar_movimiento(tecla):
 
 def dibujar_juego():
     """
-    Dibuja el estado actual de la partida usando una copia del objeto Juego.
+    Se encarga de dibujar todo lo importante durante la partida,
+    incluyendo el mapa, puntajes, poderes, entre otros aspectos visuales.      
     """
     if juego_actual is None:
         return
@@ -527,7 +596,7 @@ def dibujar_juego():
     tamano_celda = min(TAMANO_CELDA_GUI, 560 // tamano_mapa)
     ancho_mapa = tamano_celda * tamano_mapa
     inicio_x = (ANCHO - ancho_mapa) // 2
-    inicio_y = 105
+    inicio_y = 150
 
     titulo = fuente_subtitulo.render(
         f"{estilo['nombre']}  {tamano_mapa} x {tamano_mapa}",
@@ -537,15 +606,21 @@ def dibujar_juego():
     pantalla.blit(titulo, titulo.get_rect(center=(ANCHO // 2, 45)))
 
     puntaje = fuente_texto.render(f"Puntaje: {datos['puntaje']}", True, color_hex(COLOR_TEXTO))
-    pantalla.blit(puntaje, (60, 50))
+    pantalla.blit(puntaje, (15, 30))
 
-    poderes = fuente_texto.render(
-        f"Bombas: {datos['bombas']}  Fantasma: {datos['pasos_fantasma']}",
+    texto_bombas = fuente_texto.render(
+        f"Bombas: {datos['bombas']}",
         True,
         color_hex(COLOR_TEXTO),
     )
-    pantalla.blit(poderes, (60, 82))
+    pantalla.blit(texto_bombas, (15, 65))
 
+    texto_fantasmas = fuente_texto.render(
+        f"Pasos fantasmas: {datos['pasos_fantasma']}",
+        True,
+        color_hex(COLOR_TEXTO),
+    )
+    pantalla.blit(texto_fantasmas, (15, 100))
 
 
     for fila in range(tamano_mapa):
@@ -628,6 +703,9 @@ def dibujar_juego():
 
 
 def cambiar_pantalla_completa():
+    """
+    Se encarga de alternar entre modo ventana y pantalla completa.
+    """
     global ventana
     global pantalla_completa
 
@@ -692,6 +770,14 @@ def manejar_edicion_control(tecla):
 
 
 def manejar_evento(evento):
+    """Se encarga de manejar todos los eventos de Pygame, incluyendo clicks, teclas, entre otros aspectos importantes.
+
+    Args:
+        evento (_type_): Evente de Pygame a manejar.
+
+    Returns:
+        _type_: Retorna un booleano indicando si el juego debe seguir ejecutandose o no.
+    """
     global ventana
     global estado_pantalla
     global tamano_mapa
@@ -775,6 +861,9 @@ def manejar_evento(evento):
 
 
 def iniciar_interfaz():
+    """
+    Se encarga de inicializar la interfaz grafica del juego, mostrando el menú principal.
+    """
     global estado_pantalla
     global mensaje_juego
     global ultimo_desplazamiento
@@ -813,6 +902,6 @@ def iniciar_interfaz():
 
         presentar_pantalla()
         pygame.display.flip()
-        reloj.tick(60)
+        reloj.tick(5)
 
     pygame.quit()

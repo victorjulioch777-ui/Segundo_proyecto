@@ -15,11 +15,12 @@ from Config import (
 
 class Mapa:
     """
-    Representa el mapa dinamico del laberinto.
+    Representa el mapa dinámico del laberinto, que actúa como el entorno principal del juego.
 
-    El mapa mantiene siempre una matriz cuadrada, pero al inicio sus filas son
-    libres y el contenido real se va insertando desde arriba con cada
-    desplazamiento.
+    El mapa mantiene siempre una matriz cuadrada de un tamaño fijo definido por el jugador. 
+    Al inicio sus celdas están vacías, y a medida que el juego avanza, se generan nuevas 
+    filas con obstáculos desde la parte superior, empujando todo el contenido hacia abajo.
+    Además, es el responsable de mantener y administrar los elementos (poderes y recompensas).
     """
 
     def __init__(self, tamano):
@@ -79,7 +80,9 @@ class Mapa:
 
     def desplazar(self):
         """
-        Inserta una fila nueva arriba y desplaza el contenido hacia abajo.
+        Inserta una nueva fila de obstáculos en la parte superior (índice 0) y 
+        elimina la fila inferior. Todos los elementos presentes en el mapa también 
+        desplazan su posición visual hacia abajo para mantenerse sincronizados.
         """
         self.celdas.insert(0, self.crear_fila())
         self.celdas.pop()

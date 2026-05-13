@@ -6,6 +6,7 @@ from Config import (
     INTERVALO_APARICION_ELEMENTOS,
     INTERVALO_AUMENTO_DIFICULTAD,
     INTERVALO_DESPLAZAMIENTO_INICIAL,
+    MINIMO_INTERVALO_DESPLAZAMIENTO,
     TIEMPO_VIDA_PODER,
     TIPO_BOMBA,
     TIPO_MONEDA_ESPECIAL,
@@ -16,17 +17,19 @@ from Jugador import Jugador
 from Mapa import Mapa
 
 
-INTERVALO_DESPLAZAMIENTO_AMIGABLE = 5.0
+INTERVALO_DESPLAZAMIENTO_AMIGABLE = 2.0
 MINIMO_BOMBAS_VISIBLES = 2
 MINIMO_FANTASMAS_VISIBLES = 2
 
 
 class Juego:
     """
-    Controla la partida y la logica que no pertenece a la interfaz.
+    Controla la partida y toda la lógica central del juego.
 
-    El desplazamiento automatico del mapa, la aparicion de elementos y el
-    aumento de dificultad se ejecutan desde un hilo secundario.
+    Esta clase administra el estado del jugador, el mapa y los elementos en pantalla.
+    El desplazamiento automático del mapa, la aparición periódica de elementos y el
+    aumento progresivo de la dificultad se ejecutan de manera concurrente mediante
+    un hilo secundario para asi no bloquear la interfaz gráfica.
     """
 
     def __init__(self, tamano_mapa, tipo_mapa):
@@ -34,10 +37,9 @@ class Juego:
         self.tipo_mapa = tipo_mapa
         self.mapa = Mapa(tamano_mapa)
         self.jugador = Jugador(tamano_mapa - 1, tamano_mapa // 2)
-        self.bombas = 5
-        self.pasos_fantasma = 5
-        self.paso_fantasma_activo = False
-        self.mensaje = f"Mapa {tipo_mapa}. Tienes 5 bombas y 5 pasos fantasma."
+        self.bombas = 2
+        self.pasos_fantasma = 2
+        self.mensaje = f"Mapa {tipo_mapa}. Tienes 2 bombas y 2 pasos fantasma."
         self.perdio = False
         self.puntaje_guardado = False
 
@@ -73,7 +75,9 @@ class Juego:
 
     def _bucle_automatico(self):
         """
-        Ejecuta desplazamiento, dificultad y elementos temporales.
+        Ciclo de vida secundario que corre de fondo durante toda la partida.
+        Se encarga de evaluar constantemente si es necesario aplicar un desplazamiento
+        del mapa, aumentar la dificultad del juego o gestionar los elementos temporales.
         """
         while not self._detener.is_set():
             tiempo_actual = time.monotonic()
@@ -87,14 +91,16 @@ class Juego:
 
     def _actualizar_dificultad(self, tiempo_actual):
         """
-        Acelera el desplazamiento cada intervalo definido.
+        Acelera el juego progresivamente. Cada intervalo de tiempo configurado,
+        reduce el tiempo de espera entre desplazamientos del mapa, asegurando
+        que nunca sea menor al mínimo establecido.
         """
         tiempo_transcurrido = tiempo_actual - self.ultimo_aumento_dificultad
         if tiempo_transcurrido < INTERVALO_AUMENTO_DIFICULTAD:
             return
 
         self.intervalo_desplazamiento = max(
-            1.8,
+            MINIMO_INTERVALO_DESPLAZAMIENTO,
             self.intervalo_desplazamiento - DISMINUCION_TIEMPO,
         )
         self.ultimo_aumento_dificultad = tiempo_actual
@@ -156,27 +162,40 @@ class Juego:
                 return
 
             self.jugador.direccion = (cambio_fila, cambio_columna)
-            if self.paso_fantasma_activo and self._esta_dentro(nueva_fila, nueva_columna):
-                self.jugador.fila = nueva_fila
-                self.jugador.columna = nueva_columna
-                self.paso_fantasma_activo = False
-                self.mensaje = "Atravesaste un obstaculo con paso fantasma."
-                self.recoger_elemento_actual()
-            else:
-                self.mensaje = "No puedes moverte ahi."
+            self.mensaje = "No puedes moverte ahi."
 
     def activar_paso_fantasma(self):
         """
-        Activa un paso fantasma para atravesar un unico obstaculo.
+        Permite al jugador saltar un obstáculo en la dirección en la que mira,
+        siempre que la celda posterior al obstáculo esté libre.
         """
         with self.lock:
+            if self.perdio:
+                return
             if self.pasos_fantasma <= 0:
                 self.mensaje = "No tienes pasos fantasma disponibles."
                 return
 
-            self.pasos_fantasma -= 1
-            self.paso_fantasma_activo = True
-            self.mensaje = "Paso fantasma activo para el siguiente obstaculo."
+            dir_f, dir_c = self.jugador.direccion
+            f_obs = self.jugador.fila + dir_f
+            c_obs = self.jugador.columna + dir_c
+            f_dest = f_obs + dir_f
+            c_dest = c_obs + dir_c
+
+            # 1. Verificar que al frente haya un obstáculo
+            if not self._esta_dentro(f_obs, c_obs) or self.mapa.es_posicion_valida(f_obs, c_obs):
+                self.mensaje = "Debes estar frente a un obstáculo para usarlo."
+                return
+
+            # 2. Verificar que la celda de destino esté libre
+            if self._esta_dentro(f_dest, c_dest) and self.mapa.es_posicion_valida(f_dest, c_dest):
+                self.pasos_fantasma -= 1
+                self.jugador.fila = f_dest
+                self.jugador.columna = c_dest
+                self.recoger_elemento_actual()
+                self.mensaje = "¡Atravesaste el obstáculo con éxito!"
+            else:
+                self.mensaje = "No hay espacio libre después del obstáculo."
 
     def lanzar_bomba(self):
         """

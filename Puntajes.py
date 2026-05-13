@@ -13,7 +13,7 @@ RUTAS_PUNTAJES = {
 
 def guardar_puntaje(tamano_mapa, puntaje):
     """
-    Guarda el puntaje y conserva los mejores veinte por tamano de mapa.
+    Guarda el puntaje y conserva los mejores veinte por tamaño del mapa.
     """
     os.makedirs(DIRECTORIO_DATOS, exist_ok=True)
 
