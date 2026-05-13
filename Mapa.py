@@ -1,78 +1,101 @@
 import random
 
-from Config import CELDA_LIBRE, CELDA_OBSTACULO, PORCENTAJE_OBSTACULOS
-from Elementos import VALOR_MONEDA_ESPECIAL, VALOR_MONEDA_NORMAL
-from Utilidades import TIPO_BOMBA, TIPO_PASO_FANTASMA
-TIPO_MONEDA_NORMAL = "moneda_normal"
-TIPO_MONEDA_ESPECIAL = "moneda_especial"
+from Config import (
+    CELDA_LIBRE,
+    CELDA_OBSTACULO,
+    PORCENTAJE_OBSTACULOS,
+    TIPO_BOMBA,
+    TIPO_MONEDA_ESPECIAL,
+    TIPO_MONEDA_NORMAL,
+    TIPO_PASO_FANTASMA,
+    VALOR_MONEDA_ESPECIAL,
+    VALOR_MONEDA_NORMAL,
+)
 
 
 class Mapa:
     """
-    Representa el mapa logico del laberinto.
+    Representa el mapa dinamico del laberinto.
+
+    El mapa mantiene siempre una matriz cuadrada, pero al inicio sus filas son
+    libres y el contenido real se va insertando desde arriba con cada
+    desplazamiento.
     """
 
     def __init__(self, tamano):
         self.tamano = tamano
         self.celdas = []
         self.elementos = {}
-        self.generar()
+        self.filas_generadas = 0
+        self.generar_vacio()
 
-    def generar(self):
+    def generar_vacio(self):
         """
-        Crea un mapa nuevo con obstaculos y algunos elementos.
+        Crea una matriz libre para comenzar la construccion progresiva.
         """
-        self.celdas = []
+        self.celdas = [
+            [CELDA_LIBRE for _ in range(self.tamano)]
+            for _ in range(self.tamano)
+        ]
         self.elementos = {}
+        self.filas_generadas = 0
 
-        for fila in range(self.tamano):
-            nueva_fila = []
-            for columna in range(self.tamano):
-                es_borde_inicio = fila == self.tamano - 1 and columna == self.tamano // 2
-                if es_borde_inicio or random.random() > PORCENTAJE_OBSTACULOS:
-                    nueva_fila.append(CELDA_LIBRE)
-                else:
-                    nueva_fila.append(CELDA_OBSTACULO)
-            self.celdas.append(nueva_fila)
-
-        self.agregar_elementos()
-
-    def agregar_elementos(self):
+    def crear_fila(self):
         """
-        Coloca monedas y poderes en posiciones libres.
+        Crea una fila con cerca de 60% de obstaculos y sin mas de dos libres seguidas.
         """
-        cantidades = {
-            TIPO_MONEDA_NORMAL: max(3, self.tamano // 2),
-            TIPO_MONEDA_ESPECIAL: max(1, self.tamano // 5),
-            TIPO_BOMBA: max(1, self.tamano // 6),
-            TIPO_PASO_FANTASMA: 1,
-        }
+        obstaculos_objetivo = round(self.tamano * PORCENTAJE_OBSTACULOS)
+        libres_objetivo = self.tamano - obstaculos_objetivo
+        obstaculos_restantes = obstaculos_objetivo
+        libres_restantes = libres_objetivo
+        libres_consecutivas = 0
+        fila = []
 
-        for tipo, cantidad in cantidades.items():
-            for _ in range(cantidad):
-                posicion = self.obtener_posicion_libre()
-                if posicion is not None:
-                    self.elementos[posicion] = tipo
+        for indice in range(self.tamano):
+            posiciones_restantes = self.tamano - indice
 
-    def obtener_posicion_libre(self):
+            if libres_consecutivas >= 2 and obstaculos_restantes > 0:
+                celda = CELDA_OBSTACULO
+            elif obstaculos_restantes == 0:
+                celda = CELDA_LIBRE
+            elif libres_restantes == 0:
+                celda = CELDA_OBSTACULO
+            elif obstaculos_restantes >= posiciones_restantes:
+                celda = CELDA_OBSTACULO
+            else:
+                probabilidad_obstaculo = obstaculos_restantes / posiciones_restantes
+                celda = CELDA_OBSTACULO if random.random() < probabilidad_obstaculo else CELDA_LIBRE
+
+            if celda == CELDA_LIBRE:
+                libres_restantes -= 1
+                libres_consecutivas += 1
+            else:
+                obstaculos_restantes -= 1
+                libres_consecutivas = 0
+
+            fila.append(celda)
+
+        return fila
+
+    def desplazar(self):
         """
-        Busca una celda libre que no tenga otro elemento.
+        Inserta una fila nueva arriba y desplaza el contenido hacia abajo.
         """
-        posiciones = []
-        for fila in range(self.tamano):
-            for columna in range(self.tamano):
-                posicion = (fila, columna)
-                if self.celdas[fila][columna] == CELDA_LIBRE and posicion not in self.elementos:
-                    posiciones.append(posicion)
+        self.celdas.insert(0, self.crear_fila())
+        self.celdas.pop()
+        self.filas_generadas = min(self.tamano, self.filas_generadas + 1)
 
-        if not posiciones:
-            return None
+        elementos_desplazados = {}
+        for (fila, columna), datos in self.elementos.items():
+            nueva_fila = fila + 1
+            if nueva_fila < self.tamano:
+                elementos_desplazados[(nueva_fila, columna)] = datos
 
-        return random.choice(posiciones)
+        self.elementos = elementos_desplazados
 
     def es_posicion_valida(self, fila, columna):
         """
-        Indica si el jugador puede caminar a una posicion.
+        Indica si el jugador puede caminar a una posicion libre dentro del mapa.
         """
         if fila < 0 or fila >= self.tamano:
             return False
@@ -81,40 +104,105 @@ class Mapa:
 
         return self.celdas[fila][columna] == CELDA_LIBRE
 
+    def obtener_posicion_libre(self, posicion_jugador=None):
+        """
+        Busca una celda libre sin elementos para colocar recompensas o poderes.
+        """
+        posiciones = []
+        for fila in range(self.tamano):
+            for columna in range(self.tamano):
+                posicion = (fila, columna)
+                if posicion == posicion_jugador:
+                    continue
+                if self.celdas[fila][columna] == CELDA_LIBRE and posicion not in self.elementos:
+                    posiciones.append(posicion)
+
+        if not posiciones:
+            return None
+
+        return random.choice(posiciones)
+
+    def agregar_elemento_aleatorio(self, tiempo_actual, posicion_jugador=None):
+        """
+        Agrega una moneda o poder aleatorio en una celda libre.
+        """
+        tipo = random.choices(
+            [TIPO_MONEDA_NORMAL, TIPO_MONEDA_ESPECIAL, TIPO_BOMBA, TIPO_PASO_FANTASMA],
+            weights=[35, 20, 25, 20],
+            k=1,
+        )[0]
+        return self.agregar_elemento(tipo, tiempo_actual, posicion_jugador)
+
+    def agregar_elemento(self, tipo, tiempo_actual, posicion_jugador=None):
+        """
+        Agrega un elemento especifico en una celda libre.
+        """
+        posicion = self.obtener_posicion_libre(posicion_jugador)
+        if posicion is None:
+            return None
+
+        self.elementos[posicion] = {"tipo": tipo, "creado": tiempo_actual}
+        return tipo
+
+    def contar_elementos(self, tipo_buscado):
+        """
+        Cuenta cuantas instancias visibles hay de un tipo de elemento.
+        """
+        return sum(
+            1
+            for datos in self.elementos.values()
+            if datos["tipo"] == tipo_buscado
+        )
+
+    def eliminar_elementos_expirados(self, tiempo_actual, tiempo_vida):
+        """
+        Elimina elementos que exceden su tiempo de vida.
+        """
+        self.elementos = {
+            posicion: datos
+            for posicion, datos in self.elementos.items()
+            if tiempo_actual - datos["creado"] <= tiempo_vida
+        }
+
+    def obtener_elementos_visibles(self):
+        """
+        Retorna los elementos en un formato simple para la interfaz.
+        """
+        return {
+            posicion: datos["tipo"]
+            for posicion, datos in self.elementos.items()
+        }
+
     def recoger_elemento(self, jugador):
         """
-        Aplica el efecto del elemento donde esta parado el jugador.
+        Recoge el elemento donde esta el jugador y aplica puntos si es moneda.
         """
         posicion = (jugador.fila, jugador.columna)
-        tipo = self.elementos.pop(posicion, None)
+        datos = self.elementos.pop(posicion, None)
+        if datos is None:
+            return None
 
+        tipo = datos["tipo"]
         if tipo == TIPO_MONEDA_NORMAL:
             jugador.puntaje += VALOR_MONEDA_NORMAL
         elif tipo == TIPO_MONEDA_ESPECIAL:
             jugador.puntaje += VALOR_MONEDA_ESPECIAL
 
         return tipo
-    
-    
-    def crear_fila(self):
-        nueva_fila = []
 
-        for columna in range(self.tamano):
-            if random.random() > PORCENTAJE_OBSTACULOS:
-                nueva_fila.append(CELDA_LIBRE)
-            else:
-                nueva_fila.append(CELDA_OBSTACULO)
+    def destruir_obstaculo(self, fila, columna, direccion):
+        """
+        Destruye el primer obstaculo adyacente en la direccion indicada.
+        """
+        destino_fila = fila + direccion[0]
+        destino_columna = columna + direccion[1]
 
-        return nueva_fila
+        if destino_fila < 0 or destino_fila >= self.tamano:
+            return False
+        if destino_columna < 0 or destino_columna >= self.tamano:
+            return False
+        if self.celdas[destino_fila][destino_columna] != CELDA_OBSTACULO:
+            return False
 
-    def desplazar(self):
-        self.celdas.insert(0, self.crear_fila())
-        self.celdas.pop()
-
-        elementos_desplazados = {}
-        for (fila, columna), tipo in self.elementos.items():
-            nueva_fila = fila + 1
-            if nueva_fila < self.tamano:
-                elementos_desplazados[(nueva_fila, columna)] = tipo
-
-        self.elementos = elementos_desplazados
+        self.celdas[destino_fila][destino_columna] = CELDA_LIBRE
+        return True

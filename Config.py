@@ -1,11 +1,3 @@
-"""
-Contiene todas las constantes globales del juego Laberinto Dinámico.
-Centralizar estos valores aquí permite modificar el comportamiento del juego
-sin tener que buscar en múltiples archivos.
-"""
-
-import os
-
 # Tamaños permitidos para el mapa del juego (filas x columnas)
 TAMANOS_MAPA = [10, 20, 30]
 
@@ -25,16 +17,26 @@ INTERVALO_AUMENTO_DIFICULTAD = 15.0
 # Cuánto disminuye el intervalo de desplazamiento por cada aumento de dificultad
 DISMINUCION_TIEMPO = 0.1
 
-# Tiempo de aparición de nuevos elementos (monedas, bombas, etc.) en segundos
+# Tiempo de aparición de nuevos elementos (monedas ) en segundos
 INTERVALO_APARICION_ELEMENTOS = 5.0
 
 # Tiempo de vida útil de un poder o elemento en el mapa antes de desaparecer
 TIEMPO_VIDA_PODER = 10.0
 
 # Tamaño en píxeles de cada celda al ser dibujada en pantalla
-TAMANO_CELDA_GUI = 30
+TAMANO_CELDA_GUI = 40
 
-# Colores usados en el lienzo (Canvas)
+# Tipos de elementos del juego (unificados)
+TIPO_MONEDA_NORMAL = "moneda_normal"
+TIPO_MONEDA_ESPECIAL = "moneda_especial"
+TIPO_BOMBA = "bomba"
+TIPO_PASO_FANTASMA = "paso_fantasma"
+
+# Valores de las monedas
+VALOR_MONEDA_NORMAL = 5
+VALOR_MONEDA_ESPECIAL = 10
+
+# Colores 
 COLOR_FONDO = "#2E2E2E"        # Color de fondo general
 COLOR_CELDA_LIBRE = "#D3D3D3"  # Gris claro
 COLOR_OBSTACULO = "#4A4A4A"    # Gris oscuro / muro

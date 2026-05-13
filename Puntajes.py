@@ -13,13 +13,13 @@ RUTAS_PUNTAJES = {
 
 def guardar_puntaje(tamano_mapa, puntaje):
     """
-    Guarda el puntaje y conserva los mejores cinco por tamano de mapa.
+    Guarda el puntaje y conserva los mejores veinte por tamano de mapa.
     """
     os.makedirs(DIRECTORIO_DATOS, exist_ok=True)
 
     puntajes = obtener_puntajes(tamano_mapa)
     puntajes.append(puntaje)
-    puntajes = sorted(puntajes, reverse=True)[:5]
+    puntajes = sorted(puntajes, reverse=True)[:20]
 
     with open(RUTAS_PUNTAJES[tamano_mapa], "w", encoding="utf-8") as archivo:
         for valor in puntajes:
@@ -38,7 +38,11 @@ def obtener_puntajes(tamano_mapa):
     with open(ruta, "r", encoding="utf-8") as archivo:
         for linea in archivo:
             linea = linea.strip()
-            if linea.isdigit():
+            if not linea:
+                continue
+            try:
                 puntajes.append(int(linea))
+            except ValueError:
+                continue
 
     return sorted(puntajes, reverse=True)
