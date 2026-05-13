@@ -1,6 +1,5 @@
-import threading
+from Threats import Threats
 import time
-
 from Config import (
     DISMINUCION_TIEMPO,
     INTERVALO_APARICION_ELEMENTOS,
@@ -36,7 +35,7 @@ class Juego:
         self.tamano_mapa = tamano_mapa
         self.tipo_mapa = tipo_mapa
         self.mapa = Mapa(tamano_mapa)
-        self.jugador = Jugador(tamano_mapa - 1, tamano_mapa // 2)
+        self.jugador = Jugador(fila=tamano_mapa - 1, columna=tamano_mapa // 2, mapa=self.mapa)
         self.bombas = 2
         self.pasos_fantasma = 2
         self.mensaje = f"Mapa {tipo_mapa}. Tienes 2 bombas y 2 pasos fantasma."
@@ -50,38 +49,31 @@ class Juego:
         self.ultimo_desplazamiento = time.monotonic()
         self.ultimo_elemento = time.monotonic() - INTERVALO_APARICION_ELEMENTOS
         self.ultimo_aumento_dificultad = time.monotonic()
+        self._hilo = Threats()
 
-        self.lock = threading.Lock()
-        self._detener = threading.Event()
-        self._hilo = None
+
 
     def iniciar_hilo(self):
         """
-        Inicia el hilo secundario del desplazamiento automatico.
+        Arranca el hilo secundario con el bucle automatico de la partida.
         """
-        if self._hilo is not None and self._hilo.is_alive():
-            return
-
-        self._hilo = threading.Thread(target=self._bucle_automatico, daemon=True)
-        self._hilo.start()
+        self._hilo.iniciar_hilo(self.bucle_automatico)
 
     def detener_hilo(self):
         """
         Detiene el hilo secundario.
         """
-        self._detener.set()
-        if self._hilo is not None and self._hilo.is_alive():
-            self._hilo.join(timeout=1)
+        self._hilo.detener_hilo()
 
-    def _bucle_automatico(self):
+    def bucle_automatico(self):
         """
         Ciclo de vida secundario que corre de fondo durante toda la partida.
         Se encarga de evaluar constantemente si es necesario aplicar un desplazamiento
         del mapa, aumentar la dificultad del juego o gestionar los elementos temporales.
         """
-        while not self._detener.is_set():
+        while not self._hilo._detener.is_set():
             tiempo_actual = time.monotonic()
-            with self.lock:
+            with self._hilo.lock:
                 if not self.perdio:
                     self._actualizar_dificultad(tiempo_actual)
                     self._actualizar_elementos(tiempo_actual)
@@ -93,7 +85,7 @@ class Juego:
         """
         Acelera el juego progresivamente. Cada intervalo de tiempo configurado,
         reduce el tiempo de espera entre desplazamientos del mapa, asegurando
-        que nunca sea menor al mínimo establecido.
+        que nunca sea menor al mínimo establecido.lock
         """
         tiempo_transcurrido = tiempo_actual - self.ultimo_aumento_dificultad
         if tiempo_transcurrido < INTERVALO_AUMENTO_DIFICULTAD:
@@ -113,18 +105,21 @@ class Juego:
 
         if tiempo_actual - self.ultimo_elemento >= INTERVALO_APARICION_ELEMENTOS:
             posicion_jugador = (self.jugador.fila, self.jugador.columna)
-            self._asegurar_recursos(tiempo_actual, posicion_jugador)
+            self._asegurar_MinimoBombas(tiempo_actual, posicion_jugador)
+            self._asegurar_MinimoFantasmas(tiempo_actual, posicion_jugador)
             self.mapa.agregar_elemento_aleatorio(tiempo_actual, posicion_jugador)
             self.ultimo_elemento = tiempo_actual
 
-    def _asegurar_recursos(self, tiempo_actual, posicion_jugador):
+    def _asegurar_MinimoBombas(self, tiempo_actual, posicion_jugador):
         """
         Mantiene bombas y pasos fantasma apareciendo durante toda la partida.
         """
         while self.mapa.contar_elementos(TIPO_BOMBA) < MINIMO_BOMBAS_VISIBLES:
             if self.mapa.agregar_elemento(TIPO_BOMBA, tiempo_actual, posicion_jugador) is None:
                 break
-
+    
+    
+    def _asegurar_MinimoFantasmas(self, tiempo_actual, posicion_jugador):
         while self.mapa.contar_elementos(TIPO_PASO_FANTASMA) < MINIMO_FANTASMAS_VISIBLES:
             if self.mapa.agregar_elemento(TIPO_PASO_FANTASMA, tiempo_actual, posicion_jugador) is None:
                 break
@@ -150,14 +145,14 @@ class Juego:
         """
         Mueve al jugador o aplica paso fantasma si esta activo.
         """
-        with self.lock:
+        with self._hilo.lock:
             if self.perdio:
                 return
 
-            nueva_fila = self.jugador.fila + cambio_fila
-            nueva_columna = self.jugador.columna + cambio_columna
+            # nueva_fila = self.jugador.fila + cambio_fila
+            # nueva_columna = self.jugador.columna + cambio_columna
 
-            if self.jugador.mover(cambio_fila, cambio_columna, self.mapa):
+            if self.jugador.mover(cambio_fila, cambio_columna):
                 self.recoger_elemento_actual()
                 return
 
@@ -169,7 +164,7 @@ class Juego:
         Permite al jugador saltar un obstáculo en la dirección en la que mira,
         siempre que la celda posterior al obstáculo esté libre.
         """
-        with self.lock:
+        with self._hilo.lock:
             if self.perdio:
                 return
             if self.pasos_fantasma <= 0:
@@ -183,11 +178,18 @@ class Juego:
             c_dest = c_obs + dir_c
 
             # 1. Verificar que al frente haya un obstáculo
-            if not self._esta_dentro(f_obs, c_obs) or self.mapa.es_posicion_valida(f_obs, c_obs):
-                self.mensaje = "Debes estar frente a un obstáculo para usarlo."
-                return
+            self.verificarColisionFrontal(f_obs=f_obs, c_obs=c_obs)
 
             # 2. Verificar que la celda de destino esté libre
+            self.verificarDestinoLibre(f_dest=f_dest, c_dest=c_dest)
+                
+    def verificarColisionFrontal(self, f_obs, c_obs):
+        if not self._esta_dentro(f_obs, c_obs) or self.mapa.es_posicion_valida(f_obs, c_obs):
+            self.mensaje = "Debes estar frente a un obstáculo para usarlo."
+            return
+        
+    def verificarDestinoLibre(self, f_dest, c_dest):
+        
             if self._esta_dentro(f_dest, c_dest) and self.mapa.es_posicion_valida(f_dest, c_dest):
                 self.pasos_fantasma -= 1
                 self.jugador.fila = f_dest
@@ -201,7 +203,7 @@ class Juego:
         """
         Destruye un obstaculo en la direccion actual del jugador.
         """
-        with self.lock:
+        with self._hilo.lock:
             if self.bombas <= 0:
                 self.mensaje = "No tienes bombas disponibles."
                 return
@@ -238,7 +240,7 @@ class Juego:
         """
         Retorna una copia simple del estado que la interfaz necesita dibujar.
         """
-        with self.lock:
+        with self._hilo.lock:
             return {
                 "celdas": [fila[:] for fila in self.mapa.celdas],
                 "elementos": self.mapa.obtener_elementos_visibles(),

@@ -3,59 +3,10 @@ import pygame
 from Juego import Juego
 from Puntajes import guardar_puntaje, obtener_puntajes
 
-from Config import (
-    CELDA_OBSTACULO,
-    COLOR_BOMBA,
-    COLOR_FONDO,
-    COLOR_JUGADOR,
-    COLOR_MONEDA_ESPECIAL,
-    COLOR_MONEDA_NORMAL,
-    COLOR_PASO_FANTASMA,
-    COLOR_TEXTO,
-    TAMANO_CELDA_GUI,
-    TAMANOS_MAPA,
-    TIPO_BOMBA,
-    TIPO_MONEDA_ESPECIAL,
-    TIPO_MONEDA_NORMAL,
-    TIPO_PASO_FANTASMA,
-)
+from Config import *
 
-ANCHO = 1000
-ALTO = 800
 
-ventana = None
-pantalla = None
-reloj = None
-fuente_titulo = None
-fuente_subtitulo = None
-fuente_boton = None
-fuente_texto = None
-fuente_texto_pequena = None
-escala_lienzo = (1, 1)
-desplazamiento_lienzo = (0, 0)
 
-estado_pantalla = "menu"
-tamano_mapa = None
-tipo_mapa = None
-pantalla_completa = False
-juego_actual = None
-mapa_actual = None
-jugador = None
-mensaje_juego = ""
-pasos_fantasma = 0
-bombas_disponibles = 0
-ultimo_desplazamiento = 0
-control_en_edicion = None
-mensaje_configuracion = "Haz clic en CAMBIAR y luego presiona una tecla."
-
-CONTROLES = {
-    "arriba": {"nombre": "Mover arriba", "tecla": pygame.K_w},
-    "abajo": {"nombre": "Mover abajo", "tecla": pygame.K_s},
-    "izquierda": {"nombre": "Mover izquierda", "tecla": pygame.K_a},
-    "derecha": {"nombre": "Mover derecha", "tecla": pygame.K_d},
-    "bomba": {"nombre": "Usar bomba", "tecla": pygame.K_1},
-    "fantasma": {"nombre": "Usar paso fantasma", "tecla": pygame.K_2},
-}
 
 
 def color_hex(valor):
@@ -769,97 +720,169 @@ def manejar_edicion_control(tecla):
     return True
 
 
-def manejar_evento(evento):
-    """Se encarga de manejar todos los eventos de Pygame, incluyendo clicks, teclas, entre otros aspectos importantes.
 
-    Args:
-        evento (_type_): Evente de Pygame a manejar.
-
-    Returns:
-        _type_: Retorna un booleano indicando si el juego debe seguir ejecutandose o no.
-    """
-    global ventana
-    global estado_pantalla
-    global tamano_mapa
-    global tipo_mapa
-    global control_en_edicion
-    global mensaje_configuracion
+def manejarEvento(evento):
+    global ventana, estado_pantalla, tamano_mapa, tipo_mapa
+    global control_en_edicion,mensaje_configuracion
+        
+    tipos_relevantes = (pygame.KEYDOWN,pygame.MOUSEBUTTONDOWN, pygame.VIDEORESIZE)
+    
+    if evento.type not in tipos_relevantes:
+        return True
 
     if evento.type == pygame.VIDEORESIZE and not pantalla_completa:
         ventana = pygame.display.set_mode((evento.w, evento.h), pygame.RESIZABLE)
         return True
 
     if evento.type == pygame.KEYDOWN:
-        if estado_pantalla == "configuracion" and manejar_edicion_control(evento.key):
-            return True
-
-        if evento.key == pygame.K_F11:
-            cambiar_pantalla_completa()
-        elif evento.key == pygame.K_ESCAPE:
-            if estado_pantalla == "juego" and jugador is not None:
-                finalizar_partida(False)
-            elif estado_pantalla == "seleccion_mapa":
-                estado_pantalla = "seleccion_tamano"
-            else:
-                estado_pantalla = "menu"
-        elif estado_pantalla == "juego":
-            manejar_movimiento(evento.key)
+        return manejar_tecla(evento)
 
     if estado_pantalla == "menu":
-        if boton_iniciar.fue_presionado(evento):
-            tamano_mapa = None
-            tipo_mapa = None
-            estado_pantalla = "seleccion_tamano"
-        elif boton_configuracion.fue_presionado(evento):
-            estado_pantalla = "configuracion"
-        elif boton_puntajes.fue_presionado(evento):
-            estado_pantalla = "puntajes"
-        elif boton_salir.fue_presionado(evento):
-            return False
+        return manejar_menu(evento=evento)
 
-    elif estado_pantalla == "seleccion_tamano":
-        for indice, boton in enumerate(botones_tamano):
-            if boton.fue_presionado(evento):
-                tamano_mapa = TAMANOS_MAPA[indice]
-                tipo_mapa = None
-                estado_pantalla = "seleccion_mapa"
+    if estado_pantalla == "seleccion_tamano":
+        return manejar_seleccion_tamano(evento=evento)
 
-        if boton_volver.fue_presionado(evento):
-            estado_pantalla = "menu"
+    if estado_pantalla == "seleccion_mapa":
+        return manejar_seleccion_mapa(evento=evento)
 
+    if estado_pantalla == "configuracion":
+        return manejar_configuracion(evento=evento)
+
+    if estado_pantalla == "puntajes":
+        return manejar_puntajes(evento=evento)
+
+    if estado_pantalla == "perdiste":
+        return manejar_perdiste(evento=evento)
+
+    return True
+        
+def manejar_tecla(evento):
+    global estado_pantalla
+    
+    if estado_pantalla == "configuracion" and manejar_edicion_control(evento.key):
+        return True
+    
+    if evento.key == pygame.K_F11:
+        cambiar_pantalla_completa()
+        return True
+    
+    if evento.key == pygame.K_ESCAPE:
+        salir_estado_actual()
+        return True
+    
+    if estado_pantalla == "juego":
+        manejar_movimiento(evento.key)
+        
+    return True
+        
+        
+def salir_estado_actual():
+    global estado_pantalla
+    
+    if estado_pantalla == "juego" and juego_actual is not None:
+        finalizar_partida(False)
+        
     elif estado_pantalla == "seleccion_mapa":
-        if boton_volver.fue_presionado(evento):
-            estado_pantalla = "seleccion_tamano"
-        elif evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
-            for tarjeta in tarjetas_mapa:
-                if tarjeta["rect"].collidepoint(posicion_en_lienzo(evento.pos)):
-                    tipo_mapa = tarjeta["tipo"]
-                    iniciar_partida()
-                    break
+        estado_pantalla = "seleccion_tamano"
+        
+    else:
+        estado_pantalla = "menu"
 
-    elif estado_pantalla == "configuracion":
-        for accion, boton in botones_controles.items():
-            if boton.fue_presionado(evento):
-                control_en_edicion = accion
-                mensaje_configuracion = f"Presiona una tecla para: {CONTROLES[accion]['nombre']}."
 
-        if boton_volver.fue_presionado(evento):
-            control_en_edicion = None
-            estado_pantalla = "menu"
-
-    elif estado_pantalla == "puntajes":
-        if boton_volver.fue_presionado(evento):
-            estado_pantalla = "menu"
-
-    elif estado_pantalla == "perdiste":
-        if boton_volver.fue_presionado(evento):
-            if juego_actual is not None:
-                juego_actual.detener_hilo()
-            estado_pantalla = "menu"
-
+def manejar_menu(evento):
+    global estado_pantalla, tamano_mapa, tipo_mapa
+    
+    if boton_iniciar.fue_presionado(evento=evento):
+        tamano_mapa = None
+        tipo_mapa = None
+        estado_pantalla = "seleccion_tamano"
+    
+    elif boton_configuracion.fue_presionado(evento=evento):
+        estado_pantalla = "configuracion"
+        
+    elif boton_puntajes.fue_presionado(evento=evento):
+        estado_pantalla = "puntajes"
+        
+    elif boton_salir.fue_presionado(evento=evento):
+        return False
+    
     return True
 
 
+def manejar_seleccion_tamano(evento):
+    global estado_pantalla, tamano_mapa, tipo_mapa
+    
+    for tamano, boton in zip(TAMANOS_MAPA, botones_tamano):
+        if boton.fue_presionado(evento=evento):
+            tamano_mapa = tamano
+            tipo_mapa = None
+            estado_pantalla = "seleccion_mapa"
+            return True
+        
+    if boton_volver.fue_presionado(evento=evento):
+        estado_pantalla = "menu"
+        
+    return True
+
+
+def manejar_seleccion_mapa(evento):
+    global estado_pantalla, tipo_mapa
+    
+    if boton_volver.fue_presionado(evento=evento):
+        estado_pantalla = "seleccion_tamano"
+        return True
+    
+    if evento.type != pygame.MOUSEBUTTONDOWN or evento.button != 1:
+        return True
+
+    posicion = posicion_en_lienzo(evento.pos)
+    for tarjeta in tarjetas_mapa:
+        if tarjeta["rect"].collidepoint(posicion):
+            tipo_mapa = tarjeta.get("tipo", None)
+            iniciar_partida()
+            break
+
+    return True
+    
+
+
+    
+def manejar_configuracion(evento):
+    global estado_pantalla, control_en_edicion, mensaje_configuracion
+    
+    for accion, boton in botones_controles.items():
+        if boton.fue_presionado(evento):
+            control_en_edicion = accion
+            mensaje_configuracion = f"Presiona una tecla para: {CONTROLES[accion]['nombre']}."
+            return True
+        
+    if boton_volver.fue_presionado(evento=evento):
+        control_en_edicion = None
+        estado_pantalla = "menu"
+    
+    return True
+
+
+def manejar_puntajes(evento):
+    global estado_pantalla
+
+    if boton_volver.fue_presionado(evento=evento):
+        estado_pantalla = "menu"
+
+    return True
+      
+      
+def manejar_perdiste(evento):
+    global estado_pantalla
+    if boton_volver.fue_presionado(evento=evento):
+        if juego_actual is not None:
+            juego_actual.detener_hilo()
+        estado_pantalla = "menu"
+        
+    return True
+
+    
 def iniciar_interfaz():
     """
     Se encarga de inicializar la interfaz grafica del juego, mostrando el menú principal.
@@ -879,7 +902,7 @@ def iniciar_interfaz():
                     finalizar_partida(False)
                 ejecutando = False
             else:
-                ejecutando = manejar_evento(evento)
+                ejecutando = manejarEvento(evento)
 
         if estado_pantalla == "menu":
             dibujar_menu()
