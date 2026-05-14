@@ -5,10 +5,6 @@ from Puntajes import guardar_puntaje, obtener_puntajes
 
 from Config import *
 
-
-
-
-
 def color_hex(valor):
     """
     Se encarga de convertir un color en formato hexadecimal a un color de Pygame.
@@ -171,7 +167,7 @@ def inicializar_pygame():
     pygame.init()
     
     # Se encarga de permitir que al mantener presionada una tecla, se repita la acción cada cierto tiempo.
-    pygame.key.set_repeat(200, 70)
+    pygame.key.set_repeat(500, 200)
     
     ventana = pygame.display.set_mode((ANCHO, ALTO), pygame.RESIZABLE)
     pantalla = pygame.Surface((ANCHO, ALTO))
@@ -193,7 +189,8 @@ boton_volver = None
 botones_tamano = []
 tarjetas_mapa = []
 botones_controles = {}
-
+boton_pausa_juego = None
+boton_salir_juego = None
 
 def crear_botones():
     """
@@ -208,6 +205,8 @@ def crear_botones():
     global botones_tamano
     global tarjetas_mapa
     global botones_controles
+    global boton_pausa_juego
+    global boton_salir_juego
 
     boton_iniciar = Boton(330, 300, 340, 70, "INICIAR PARTIDA", NARANJA, NARANJA_OSCURO)
     boton_configuracion = Boton(330, 400, 340, 70, "CONFIGURACION", VERDE, VERDE_OSCURO)
@@ -232,6 +231,8 @@ def crear_botones():
         "fantasma": Boton(680, 560, 190, 48, "CAMBIAR", NARANJA, NARANJA_OSCURO),
     }
 
+    boton_pausa_juego = Boton(780, 30, 190, 48, "Pausar", NARANJA, NARANJA_OSCURO)
+    boton_salir_juego = Boton(780, 88, 190, 48, "Salir", ROJO, (150, 40, 40))
 
 def nombre_tecla(tecla):
     """Se encarga de convertir una tecla de Pygame en un nombre más bonito y entendible para mostrarlo en pantalla.
@@ -652,6 +653,13 @@ def dibujar_juego():
     )
     pantalla.blit(dificultad, dificultad.get_rect(center=(ANCHO // 2, 784)))
 
+    boton_pausa_juego.texto = "Reanudar" if datos.get("pausado") else "Pausar"
+    boton_pausa_juego.dibujar(pantalla)
+    boton_salir_juego.dibujar(pantalla)
+
+    if datos.get("pausado", False):
+        dibujar_texto_con_sombra(pantalla, "PAUSADO", fuente_titulo, BLANCO, (ANCHO // 2, ALTO // 2))
+
 
 def cambiar_pantalla_completa():
     """
@@ -719,8 +727,6 @@ def manejar_edicion_control(tecla):
 
     return True
 
-
-
 def manejarEvento(evento):
     global ventana, estado_pantalla, tamano_mapa, tipo_mapa
     global control_en_edicion,mensaje_configuracion
@@ -751,6 +757,9 @@ def manejarEvento(evento):
 
     if estado_pantalla == "puntajes":
         return manejar_puntajes(evento=evento)
+
+    if estado_pantalla == "juego":
+        return manejar_juego(evento=evento)
 
     if estado_pantalla == "perdiste":
         return manejar_perdiste(evento=evento)
@@ -845,9 +854,6 @@ def manejar_seleccion_mapa(evento):
 
     return True
     
-
-
-    
 def manejar_configuracion(evento):
     global estado_pantalla, control_en_edicion, mensaje_configuracion
     
@@ -872,7 +878,20 @@ def manejar_puntajes(evento):
 
     return True
       
-      
+def manejar_juego(evento):
+    global estado_pantalla
+
+    if boton_pausa_juego.fue_presionado(evento):
+        if juego_actual is not None:
+            juego_actual.pausado = not juego_actual.pausado
+            return True
+    
+    if boton_salir_juego.fue_presionado(evento):
+        finalizar_partida(False)
+        return True
+
+    return True
+    
 def manejar_perdiste(evento):
     global estado_pantalla
     if boton_volver.fue_presionado(evento=evento):

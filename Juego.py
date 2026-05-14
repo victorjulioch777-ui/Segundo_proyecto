@@ -40,6 +40,7 @@ class Juego:
         self.pasos_fantasma = 2
         self.mensaje = f"Mapa {tipo_mapa}. Tienes 2 bombas y 2 pasos fantasma."
         self.perdio = False
+        self.pausado = False
         self.puntaje_guardado = False
 
         self.intervalo_desplazamiento = max(
@@ -71,10 +72,17 @@ class Juego:
         Se encarga de evaluar constantemente si es necesario aplicar un desplazamiento
         del mapa, aumentar la dificultad del juego o gestionar los elementos temporales.
         """
+        tiempo_anterior = time.monotonic()
         while not self._hilo._detener.is_set():
             tiempo_actual = time.monotonic()
+            delta = tiempo_actual - tiempo_anterior
+            tiempo_anterior = tiempo_actual
             with self._hilo.lock:
-                if not self.perdio:
+                if self.pausado:
+                    self.ultimo_aumento_dificultad += delta
+                    self.ultimo_elemento += delta
+                    self.ultimo_desplazamiento += delta
+                elif not self.perdio:
                     self._actualizar_dificultad(tiempo_actual)
                     self._actualizar_elementos(tiempo_actual)
                     self._actualizar_desplazamiento(tiempo_actual)
@@ -146,11 +154,8 @@ class Juego:
         Mueve al jugador o aplica paso fantasma si esta activo.
         """
         with self._hilo.lock:
-            if self.perdio:
+            if self.perdio or self.pausado:
                 return
-
-            # nueva_fila = self.jugador.fila + cambio_fila
-            # nueva_columna = self.jugador.columna + cambio_columna
 
             if self.jugador.mover(cambio_fila, cambio_columna):
                 self.recoger_elemento_actual()
@@ -165,7 +170,7 @@ class Juego:
         siempre que la celda posterior al obstáculo esté libre.
         """
         with self._hilo.lock:
-            if self.perdio:
+            if self.perdio or self.pausado:
                 return
             if self.pasos_fantasma <= 0:
                 self.mensaje = "No tienes pasos fantasma disponibles."
@@ -204,6 +209,8 @@ class Juego:
         Destruye un obstaculo en la direccion actual del jugador.
         """
         with self._hilo.lock:
+            if self.perdio or self.pausado:
+                return
             if self.bombas <= 0:
                 self.mensaje = "No tienes bombas disponibles."
                 return
@@ -251,6 +258,7 @@ class Juego:
                 "pasos_fantasma": self.pasos_fantasma,
                 "mensaje": self.mensaje,
                 "perdio": self.perdio,
+                "pausado": self.pausado,
                 "intervalo": self.intervalo_desplazamiento,
                 "direccion": self.jugador.direccion,
             }

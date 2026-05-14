@@ -1,6 +1,5 @@
 import threading
 
-
 class Threats:
     def __init__(self):
         self.lock = threading.Lock()
