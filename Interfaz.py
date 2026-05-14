@@ -167,7 +167,7 @@ def inicializar_pygame():
     pygame.init()
     
     # Se encarga de permitir que al mantener presionada una tecla, se repita la acción cada cierto tiempo.
-    pygame.key.set_repeat(350, 180)
+    pygame.key.set_repeat(300, 150)
     
     ventana = pygame.display.set_mode((ANCHO, ALTO), pygame.RESIZABLE)
     pantalla = pygame.Surface((ANCHO, ALTO))
@@ -191,6 +191,8 @@ tarjetas_mapa = []
 botones_controles = {}
 boton_pausa_juego = None
 boton_salir_juego = None
+boton_volver_perdiste = None
+boton_jugar_otra_vez = None
 
 def crear_botones():
     """
@@ -207,12 +209,16 @@ def crear_botones():
     global botones_controles
     global boton_pausa_juego
     global boton_salir_juego
+    global boton_volver_perdiste
+    global boton_jugar_otra_vez
 
     boton_iniciar = Boton(330, 300, 340, 70, "INICIAR PARTIDA", NARANJA, NARANJA_OSCURO)
     boton_configuracion = Boton(330, 400, 340, 70, "CONFIGURACION", VERDE, VERDE_OSCURO)
     boton_puntajes = Boton(330, 500, 340, 70, "PUNTAJES", GRIS_CLARO, GRIS)
     boton_salir = Boton(330, 600, 340, 70, "SALIR", GRIS, (20, 20, 20))
     boton_volver = Boton(380, 660, 240, 70, "VOLVER", GRIS, (100, 100, 100))
+    boton_volver_perdiste = Boton(250, 660, 240, 70, "VOLVER", GRIS, (100, 100, 100))
+    boton_jugar_otra_vez = Boton(510, 660, 240, 70, "JUGAR OTRA VEZ", NARANJA, NARANJA_OSCURO)
     botones_tamano = [
         Boton(240 + indice * 190, 330, 150, 70, f"{tamano} x {tamano}", NARANJA, NARANJA_OSCURO)
         for indice, tamano in enumerate(TAMANOS_MAPA)
@@ -480,7 +486,8 @@ def dibujar_perdiste():
         texto_top = fuente_texto_pequena.render(f"{indice:02d}. {valor}", True, BLANCO)
         pantalla.blit(texto_top, texto_top.get_rect(center=(columnas[columna], 310 + fila * 28)))
 
-    boton_volver.dibujar(pantalla)
+    boton_volver_perdiste.dibujar(pantalla)
+    boton_jugar_otra_vez.dibujar(pantalla)
 
 
 def iniciar_partida():
@@ -978,10 +985,12 @@ def manejar_perdiste(evento):
         _type_: Retorna True si el evento fue manejado, False en caso contrario.
     """
     global estado_pantalla
-    if boton_volver.fue_presionado(evento=evento):
+    if boton_volver_perdiste.fue_presionado(evento=evento):
         if juego_actual is not None:
             juego_actual.detener_hilo()
         estado_pantalla = "menu"
+    elif boton_jugar_otra_vez.fue_presionado(evento=evento):
+        iniciar_partida()
         
     return True
 
