@@ -167,7 +167,7 @@ def inicializar_pygame():
     pygame.init()
     
     # Se encarga de permitir que al mantener presionada una tecla, se repita la acción cada cierto tiempo.
-    pygame.key.set_repeat(500, 200)
+    pygame.key.set_repeat(350, 180)
     
     ventana = pygame.display.set_mode((ANCHO, ALTO), pygame.RESIZABLE)
     pantalla = pygame.Surface((ANCHO, ALTO))
@@ -510,10 +510,13 @@ def iniciar_partida():
     estado_pantalla = "juego"
 
 
+ultimo_movimiento_tecla = None
+
 def manejar_movimiento(tecla):
     """
     Traduce la tecla configurada a una accion de la partida.
     """
+    global ultimo_movimiento_tecla
     if juego_actual is None:
         return
 
@@ -525,8 +528,7 @@ def manejar_movimiento(tecla):
     }
 
     if tecla in movimientos:
-        cambio_fila, cambio_columna = movimientos[tecla]
-        juego_actual.mover_jugador(cambio_fila, cambio_columna)
+        ultimo_movimiento_tecla = tecla
     elif tecla == CONTROLES["bomba"]["tecla"]:
         juego_actual.lanzar_bomba()
     elif tecla == CONTROLES["fantasma"]["tecla"]:
@@ -598,7 +600,7 @@ def dibujar_juego():
         }.get(tipo, COLOR_MONEDA_NORMAL)
         pygame.draw.circle(pantalla, color_hex(color), centro, radio)
 
-    # Dibujar al jugador como rectangulo con flecha de direccion
+    # Se encarga de dibujar al jugador como un rectangulo con una flecha que indica su dirección actual.
     jugador_x = inicio_x + datos["jugador_columna"] * tamano_celda + 4
     jugador_y = inicio_y + datos["jugador_fila"] * tamano_celda + 4
     jugador_ancho = tamano_celda - 8
@@ -728,6 +730,15 @@ def manejar_edicion_control(tecla):
     return True
 
 def manejarEvento(evento):
+    """Se encarga de manejar los eventos de Pygame,
+    llamando a funciones específicar según el estado actual de la pantalla.
+
+    Args:
+        evento (_type_): Evento de Pygame.
+
+    Returns:
+        _type_: Retorna True si el evento fue manejado, False en caso contrario.
+    """
     global ventana, estado_pantalla, tamano_mapa, tipo_mapa
     global control_en_edicion,mensaje_configuracion
         
@@ -767,6 +778,15 @@ def manejarEvento(evento):
     return True
         
 def manejar_tecla(evento):
+    """Se encarga de manejar las teclas presionadas en cualquier pantalla, 
+    como para salir del juego, cambiar a pantalla completa o cancelar la edición de un control.
+
+    Args:
+        evento (_type_): Evento de Pygame.
+
+    Returns:
+        _type_: Retorna True si el evento fue manejado, False en caso contrario.
+    """
     global estado_pantalla
     
     if estado_pantalla == "configuracion" and manejar_edicion_control(evento.key):
@@ -787,6 +807,10 @@ def manejar_tecla(evento):
         
         
 def salir_estado_actual():
+    """
+    Se encarga de salir del estado actual, ya sea una partida,
+    la selección de mapa o el menú, para asi volver al estado que desee.
+    """
     global estado_pantalla
     
     if estado_pantalla == "juego" and juego_actual is not None:
@@ -800,6 +824,16 @@ def salir_estado_actual():
 
 
 def manejar_menu(evento):
+    """Se encarga de manejar los eventos del menú principal, 
+    permitiendo al usuario navegar entre las opciones de iniciar partida, configuración,
+    puntajes y salir del juego.
+
+    Args:
+        evento (_type_): Evento de Pygame.
+
+    Returns:
+        _type_: Retorna True si el evento fue manejado, False en caso contrario.
+    """
     global estado_pantalla, tamano_mapa, tipo_mapa
     
     if boton_iniciar.fue_presionado(evento=evento):
@@ -820,6 +854,15 @@ def manejar_menu(evento):
 
 
 def manejar_seleccion_tamano(evento):
+    """Se encarga de manejar los eventos de la pantalla de selección de tamaño,
+    permitiendo al usuario elegir entre los tamaños que desea para su partida.
+
+    Args:
+        evento (_type_): Evento de Pygame.
+
+    Returns:
+        _type_: Retorna True si el evento fue manejado, False en caso contrario.
+    """
     global estado_pantalla, tamano_mapa, tipo_mapa
     
     for tamano, boton in zip(TAMANOS_MAPA, botones_tamano):
@@ -836,6 +879,15 @@ def manejar_seleccion_tamano(evento):
 
 
 def manejar_seleccion_mapa(evento):
+    """Se encarga de manejar los eventos de la pantalla de selección de mapa, permitiendo al usuario elegir el 
+    estilo visual que desea para su partida.
+
+    Args:
+        evento (_type_): Evento de Pygame.
+
+    Returns:
+        _type_: Retorna True si el evento fue manejado, False en caso contrario.
+    """
     global estado_pantalla, tipo_mapa
     
     if boton_volver.fue_presionado(evento=evento):
@@ -855,6 +907,14 @@ def manejar_seleccion_mapa(evento):
     return True
     
 def manejar_configuracion(evento):
+    """Se encarga de manejar los eventos de la pantalla de configuración, permitiendo cambiar los controles del juego.
+
+    Args:
+        evento (_type_): Evento de Pygame.
+
+    Returns:
+        _type_: Retorna True si el eventos fue manejado, False en caso contrario.
+    """
     global estado_pantalla, control_en_edicion, mensaje_configuracion
     
     for accion, boton in botones_controles.items():
@@ -871,6 +931,14 @@ def manejar_configuracion(evento):
 
 
 def manejar_puntajes(evento):
+    """Se encarga de manejar los eventos de la pantalla de puntajes.
+
+    Args:
+        evento (_type_): Evento de Pygame.
+
+    Returns:
+        _type_: Retorna True si el evento fue manejado, False en caso contrario.
+    """
     global estado_pantalla
 
     if boton_volver.fue_presionado(evento=evento):
@@ -879,6 +947,14 @@ def manejar_puntajes(evento):
     return True
       
 def manejar_juego(evento):
+    """Se encarga de manejar los eventos durante la partida, como pausar o salir del juego.
+
+    Args:
+        evento (_type_): Evento de pygame
+
+    Returns:
+        _type_: Retorna True si el evento fue manejado, False en caso contrario.
+    """
     global estado_pantalla
 
     if boton_pausa_juego.fue_presionado(evento):
@@ -893,6 +969,14 @@ def manejar_juego(evento):
     return True
     
 def manejar_perdiste(evento):
+    """Se encarga de manejar los eventos de la pantalla de perdiste.
+
+    Args:
+        evento (_type_): Evento de pygame.
+
+    Returns:
+        _type_: Retorna True si el evento fue manejado, False en caso contrario.
+    """
     global estado_pantalla
     if boton_volver.fue_presionado(evento=evento):
         if juego_actual is not None:
@@ -909,19 +993,33 @@ def iniciar_interfaz():
     global estado_pantalla
     global mensaje_juego
     global ultimo_desplazamiento
+    global ultimo_movimiento_tecla
 
     inicializar_pygame()
     crear_botones()
     ejecutando = True
 
     while ejecutando:
+        ultimo_movimiento_tecla = None
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 if estado_pantalla == "juego":
                     finalizar_partida(False)
                 ejecutando = False
             else:
-                ejecutando = manejarEvento(evento)
+                if not manejarEvento(evento):
+                    ejecutando = False
+
+        if estado_pantalla == "juego" and ultimo_movimiento_tecla is not None and juego_actual is not None:
+            movimientos = {
+                CONTROLES["arriba"]["tecla"]: (-1, 0),
+                CONTROLES["abajo"]["tecla"]: (1, 0),
+                CONTROLES["izquierda"]["tecla"]: (0, -1),
+                CONTROLES["derecha"]["tecla"]: (0, 1),
+            }
+            if ultimo_movimiento_tecla in movimientos:
+                cambio_fila, cambio_columna = movimientos[ultimo_movimiento_tecla]
+                juego_actual.mover_jugador(cambio_fila, cambio_columna)
 
         if estado_pantalla == "menu":
             dibujar_menu()
