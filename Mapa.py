@@ -3,7 +3,6 @@ import random
 from Config import (
     CELDA_LIBRE,
     CELDA_OBSTACULO,
-    PORCENTAJE_OBSTACULOS,
     TIPO_BOMBA,
     TIPO_MONEDA_ESPECIAL,
     TIPO_MONEDA_NORMAL,
@@ -11,7 +10,6 @@ from Config import (
     VALOR_MONEDA_ESPECIAL,
     VALOR_MONEDA_NORMAL,
 )
-
 
 class Mapa:
     """
@@ -23,8 +21,9 @@ class Mapa:
     Además, es el responsable de mantener y administrar los elementos (poderes y recompensas).
     """
 
-    def __init__(self, tamano):
+    def __init__(self, tamano, porcentaje_obstaculos=0.60):
         self.tamano = tamano
+        self.porcentaje_obstaculos = porcentaje_obstaculos
         self.celdas = []
         self.elementos = {}
         self.filas_generadas = 0
@@ -43,9 +42,9 @@ class Mapa:
 
     def crear_fila(self):
         """
-        Crea una fila con cerca de 60% de obstaculos y sin mas de dos libres seguidas.
+        Crea una fila con el porcentaje de obstaculos configurado y sin mas de dos libres seguidas.
         """
-        obstaculos_objetivo = round(self.tamano * PORCENTAJE_OBSTACULOS)
+        obstaculos_objetivo = round(self.tamano * self.porcentaje_obstaculos)
         libres_objetivo = self.tamano - obstaculos_objetivo
         obstaculos_restantes = obstaculos_objetivo
         libres_restantes = libres_objetivo

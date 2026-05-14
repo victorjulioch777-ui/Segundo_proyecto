@@ -15,11 +15,9 @@ from Config import (
 from Jugador import Jugador
 from Mapa import Mapa
 
-
 INTERVALO_DESPLAZAMIENTO_AMIGABLE = 2.0
 MINIMO_BOMBAS_VISIBLES = 2
 MINIMO_FANTASMAS_VISIBLES = 2
-
 
 class Juego:
     """
@@ -31,10 +29,10 @@ class Juego:
     un hilo secundario para asi no bloquear la interfaz gráfica.
     """
 
-    def __init__(self, tamano_mapa, tipo_mapa):
+    def __init__(self, tamano_mapa, tipo_mapa, porcentaje_obstaculos=0.60):
         self.tamano_mapa = tamano_mapa
         self.tipo_mapa = tipo_mapa
-        self.mapa = Mapa(tamano_mapa)
+        self.mapa = Mapa(tamano_mapa, porcentaje_obstaculos)
         self.jugador = Jugador(fila=tamano_mapa - 1, columna=tamano_mapa // 2, mapa=self.mapa)
         self.bombas = 2
         self.pasos_fantasma = 2

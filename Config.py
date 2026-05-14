@@ -3,9 +3,6 @@ import pygame
 # Tamaños permitidos para el mapa del juego
 TAMANOS_MAPA = [10, 20, 30]
 
-# Porcentaje de obstáculos al generar una nueva fila
-PORCENTAJE_OBSTACULOS = 0.60  # 60%
-
 # Valores que representarán los elementos en la matriz
 CELDA_LIBRE = 0
 CELDA_OBSTACULO = 1
@@ -52,8 +49,6 @@ COLOR_BOMBA = "#FF0000"        # Rojo
 COLOR_PASO_FANTASMA = "#DA70D6" # Orquídea/Morado claro
 COLOR_TEXTO = "#FFFFFF"        # Blanco para textos informativos
 
-
-
 CONTROLES = {
     "arriba": {"nombre": "Mover arriba", "tecla": pygame.K_w},
     "abajo": {"nombre": "Mover abajo", "tecla": pygame.K_s},
@@ -63,12 +58,8 @@ CONTROLES = {
     "fantasma": {"nombre": "Usar paso fantasma", "tecla": pygame.K_2},
 }   
 
-
 ANCHO = 1000
 ALTO = 800
-
-
-
 
 ventana = None
 pantalla = None
@@ -84,6 +75,7 @@ desplazamiento_lienzo = (0, 0)
 estado_pantalla = "menu"
 tamano_mapa = None
 tipo_mapa = None
+dificultad = None
 pantalla_completa = False
 juego_actual = None
 mapa_actual = None
@@ -94,4 +86,3 @@ bombas_disponibles = 0
 ultimo_desplazamiento = 0
 control_en_edicion = None
 mensaje_configuracion = "Haz clic en CAMBIAR y luego presiona una tecla."
-

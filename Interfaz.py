@@ -11,7 +11,6 @@ def color_hex(valor):
     """
     return pygame.Color(valor)
 
-
 def calcular_transformacion_lienzo():
     """
     Calcula la escala del lienzo virtual dentro de la ventana.
@@ -29,7 +28,6 @@ def calcular_transformacion_lienzo():
 
     return (escala_x, escala_y), (0, 0)
 
-
 def posicion_en_lienzo(posicion):
     """
     Convierte una posicion de la ventana real a coordenadas del lienzo virtual.
@@ -38,7 +36,6 @@ def posicion_en_lienzo(posicion):
     x = (posicion[0] - desplazamiento[0]) / escala[0]
     y = (posicion[1] - desplazamiento[1]) / escala[1]
     return x, y
-
 
 def obtener_posicion_mouse_lienzo():
     """
@@ -60,7 +57,6 @@ def presentar_pantalla():
 
     superficie_escalada = pygame.transform.smoothscale(pantalla, (ancho_ventana, alto_ventana))
     ventana.blit(superficie_escalada, (0, 0))
-
 
 BLANCO = (255, 255, 255)
 NEGRO = (0, 0, 0)
@@ -100,7 +96,6 @@ ESTILOS_MAPA = {
         "borde": (45, 110, 155),
     },
 }
-
 
 class Boton:
     def __init__(self, x, y, ancho, alto, texto, color, color_hover):
@@ -151,7 +146,6 @@ class Boton:
             return self.rect.collidepoint(posicion_en_lienzo(evento.pos))
         return False
 
-
 def inicializar_pygame():
     """Se encarga de inicializar Pygame y todos sus componentes.
     """
@@ -180,7 +174,6 @@ def inicializar_pygame():
     fuente_texto = pygame.font.SysFont("arial", 26)
     fuente_texto_pequena = pygame.font.SysFont("arial", 22)
 
-
 boton_iniciar = None
 boton_configuracion = None
 boton_puntajes = None
@@ -193,6 +186,9 @@ boton_pausa_juego = None
 boton_salir_juego = None
 boton_volver_perdiste = None
 boton_jugar_otra_vez = None
+boton_dificultad_facil = None
+boton_dificultad_medio = None
+boton_dificultad_dificil = None
 
 def crear_botones():
     """
@@ -211,6 +207,9 @@ def crear_botones():
     global boton_salir_juego
     global boton_volver_perdiste
     global boton_jugar_otra_vez
+    global boton_dificultad_facil
+    global boton_dificultad_medio
+    global boton_dificultad_dificil
 
     boton_iniciar = Boton(330, 300, 340, 70, "INICIAR PARTIDA", NARANJA, NARANJA_OSCURO)
     boton_configuracion = Boton(330, 400, 340, 70, "CONFIGURACION", VERDE, VERDE_OSCURO)
@@ -219,6 +218,9 @@ def crear_botones():
     boton_volver = Boton(380, 660, 240, 70, "VOLVER", GRIS, (100, 100, 100))
     boton_volver_perdiste = Boton(250, 660, 240, 70, "VOLVER", GRIS, (100, 100, 100))
     boton_jugar_otra_vez = Boton(510, 660, 240, 70, "JUGAR OTRA VEZ", NARANJA, NARANJA_OSCURO)
+    boton_dificultad_facil = Boton(330, 300, 340, 70, "FACIL (20%)", VERDE, VERDE_OSCURO)
+    boton_dificultad_medio = Boton(330, 400, 340, 70, "MEDIO (40%)", NARANJA, NARANJA_OSCURO)
+    boton_dificultad_dificil = Boton(330, 500, 340, 70, "DIFICIL (60%)", ROJO, (150, 40, 40))
     botones_tamano = [
         Boton(240 + indice * 190, 330, 150, 70, f"{tamano} x {tamano}", NARANJA, NARANJA_OSCURO)
         for indice, tamano in enumerate(TAMANOS_MAPA)
@@ -258,7 +260,6 @@ def nombre_tecla(tecla):
         return nombre[1:-1]
     return nombre
 
-
 def resumen_controles_juego():
     """Se encarga de generar un resumen de los controles configurados para mostrarlos en pantalla.
 
@@ -273,7 +274,6 @@ def resumen_controles_juego():
         f"Bomba: {nombre_tecla(CONTROLES['bomba']['tecla'])}  "
         f"Pasos fantasmas: {nombre_tecla(CONTROLES['fantasma']['tecla'])}"
     )
-
 
 def dibujar_texto_con_sombra(superficie, texto, fuente, color, centro):
     """Se encarga de dibujar un texto con sombra para que asi resalte más.
@@ -290,7 +290,6 @@ def dibujar_texto_con_sombra(superficie, texto, fuente, color, centro):
     superficie.blit(sombra, sombra.get_rect(center=(centro[0] + 4, centro[1] + 4)))
     superficie.blit(principal, principal.get_rect(center=centro))
 
-
 def dibujar_fondo(superficie):
     """Esta funcion se encarga de dibujar el fondo de la pantalla.
 
@@ -300,7 +299,6 @@ def dibujar_fondo(superficie):
     superficie.fill(color_hex(COLOR_FONDO))
     pygame.draw.circle(superficie, (20, 130, 200), (150, 120), 180)
     pygame.draw.circle(superficie, (15, 90, 150), (850, 680), 220)
-
 
 def dibujar_menu():
     """
@@ -313,7 +311,6 @@ def dibujar_menu():
     boton_configuracion.dibujar(pantalla)
     boton_puntajes.dibujar(pantalla)
     boton_salir.dibujar(pantalla)
-
 
 def dibujar_configuracion():
     """Se encarga de dibujar el apartado de los controles en configuración.
@@ -347,7 +344,6 @@ def dibujar_configuracion():
     pantalla.blit(mensaje, mensaje.get_rect(center=(ANCHO // 2, 635)))
     boton_volver.dibujar(pantalla)
 
-
 def dibujar_seleccion_tamano():
     """
     Dibuja la pantalla donde el usuario escoge 10x10, 20x20 o 30x30.
@@ -364,7 +360,6 @@ def dibujar_seleccion_tamano():
         boton.dibujar(pantalla)
 
     boton_volver.dibujar(pantalla)
-
 
 def dibujar_preview_mapa(superficie, rect, tipo):
     """
@@ -392,7 +387,6 @@ def dibujar_preview_mapa(superficie, rect, tipo):
 
             pygame.draw.rect(superficie, color, celda_rect, border_radius=4)
             pygame.draw.rect(superficie, estilo["borde"], celda_rect, 2, border_radius=4)
-
 
 def dibujar_seleccion_mapa():
     """
@@ -428,6 +422,21 @@ def dibujar_seleccion_mapa():
 
     boton_volver.dibujar(pantalla)
 
+def dibujar_seleccion_dificultad():
+    """
+    Dibuja la pantalla donde el usuario escoge la dificultad.
+    """
+    dibujar_fondo(pantalla)
+    dibujar_texto_con_sombra(pantalla, "DIFICULTAD", fuente_titulo, BLANCO, (ANCHO // 2, 105))
+
+    texto_info = fuente_texto.render("Elige la opcion de dificultad", True, BLANCO)
+    pantalla.blit(texto_info, texto_info.get_rect(center=(ANCHO // 2, 178)))
+
+    boton_dificultad_facil.dibujar(pantalla)
+    boton_dificultad_medio.dibujar(pantalla)
+    boton_dificultad_dificil.dibujar(pantalla)
+
+    boton_volver.dibujar(pantalla)
 
 def dibujar_puntajes():
     """
@@ -455,7 +464,6 @@ def dibujar_puntajes():
         x += 310
 
     boton_volver.dibujar(pantalla)
-
 
 def dibujar_perdiste():
     """
@@ -489,7 +497,6 @@ def dibujar_perdiste():
     boton_volver_perdiste.dibujar(pantalla)
     boton_jugar_otra_vez.dibujar(pantalla)
 
-
 def iniciar_partida():
     """
     Se encarga de iniciar una nueva partida.
@@ -506,7 +513,15 @@ def iniciar_partida():
     if juego_actual is not None:
         juego_actual.detener_hilo()
 
-    juego_actual = Juego(tamano_mapa, tipo_mapa)
+    porcentaje = 0.60
+    if dificultad == "facil":
+        porcentaje = 0.20
+    elif dificultad == "medio":
+        porcentaje = 0.40
+    elif dificultad == "dificil":
+        porcentaje = 0.60
+
+    juego_actual = Juego(tamano_mapa, tipo_mapa, porcentaje)
     mapa_actual = juego_actual.mapa
     jugador = juego_actual.jugador
     pasos_fantasma = juego_actual.pasos_fantasma
@@ -515,7 +530,6 @@ def iniciar_partida():
     mensaje_juego = juego_actual.mensaje
     juego_actual.iniciar_hilo()
     estado_pantalla = "juego"
-
 
 ultimo_movimiento_tecla = None
 
@@ -540,7 +554,6 @@ def manejar_movimiento(tecla):
         juego_actual.lanzar_bomba()
     elif tecla == CONTROLES["fantasma"]["tecla"]:
         juego_actual.activar_paso_fantasma()
-
 
 def dibujar_juego():
     """
@@ -669,7 +682,6 @@ def dibujar_juego():
     if datos.get("pausado", False):
         dibujar_texto_con_sombra(pantalla, "PAUSADO", fuente_titulo, BLANCO, (ANCHO // 2, ALTO // 2))
 
-
 def cambiar_pantalla_completa():
     """
     Se encarga de alternar entre modo ventana y pantalla completa.
@@ -682,7 +694,6 @@ def cambiar_pantalla_completa():
         ventana = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
     else:
         ventana = pygame.display.set_mode((ANCHO, ALTO), pygame.RESIZABLE)
-
 
 def finalizar_partida(ir_a_perdiste=False):
     """
@@ -699,7 +710,6 @@ def finalizar_partida(ir_a_perdiste=False):
 
     estado_pantalla = "perdiste" if ir_a_perdiste else "menu"
 
-
 def asignar_control(accion, tecla):
     """
     Cambia la tecla de una accion si no esta repetida.
@@ -714,7 +724,6 @@ def asignar_control(accion, tecla):
     CONTROLES[accion]["tecla"] = tecla
     mensaje_configuracion = f"{CONTROLES[accion]['nombre']} ahora usa {nombre_tecla(tecla)}."
     return True
-
 
 def manejar_edicion_control(tecla):
     """
@@ -770,6 +779,9 @@ def manejarEvento(evento):
     if estado_pantalla == "seleccion_mapa":
         return manejar_seleccion_mapa(evento=evento)
 
+    if estado_pantalla == "seleccion_dificultad":
+        return manejar_seleccion_dificultad(evento=evento)
+
     if estado_pantalla == "configuracion":
         return manejar_configuracion(evento=evento)
 
@@ -812,7 +824,6 @@ def manejar_tecla(evento):
         
     return True
         
-        
 def salir_estado_actual():
     """
     Se encarga de salir del estado actual, ya sea una partida,
@@ -826,9 +837,11 @@ def salir_estado_actual():
     elif estado_pantalla == "seleccion_mapa":
         estado_pantalla = "seleccion_tamano"
         
+    elif estado_pantalla == "seleccion_dificultad":
+        estado_pantalla = "seleccion_mapa"
+        
     else:
         estado_pantalla = "menu"
-
 
 def manejar_menu(evento):
     """Se encarga de manejar los eventos del menú principal, 
@@ -859,7 +872,6 @@ def manejar_menu(evento):
     
     return True
 
-
 def manejar_seleccion_tamano(evento):
     """Se encarga de manejar los eventos de la pantalla de selección de tamaño,
     permitiendo al usuario elegir entre los tamaños que desea para su partida.
@@ -884,7 +896,6 @@ def manejar_seleccion_tamano(evento):
         
     return True
 
-
 def manejar_seleccion_mapa(evento):
     """Se encarga de manejar los eventos de la pantalla de selección de mapa, permitiendo al usuario elegir el 
     estilo visual que desea para su partida.
@@ -908,11 +919,34 @@ def manejar_seleccion_mapa(evento):
     for tarjeta in tarjetas_mapa:
         if tarjeta["rect"].collidepoint(posicion):
             tipo_mapa = tarjeta.get("tipo", None)
-            iniciar_partida()
+            estado_pantalla = "seleccion_dificultad"
             break
 
     return True
+
+def manejar_seleccion_dificultad(evento):
+    """Se encarga de manejar los eventos de la pantalla de selección de dificultad."""
+    global estado_pantalla, dificultad
     
+    if boton_dificultad_facil.fue_presionado(evento=evento):
+        dificultad = "facil"
+        iniciar_partida()
+        return True
+    elif boton_dificultad_medio.fue_presionado(evento=evento):
+        dificultad = "medio"
+        iniciar_partida()
+        return True
+    elif boton_dificultad_dificil.fue_presionado(evento=evento):
+        dificultad = "dificil"
+        iniciar_partida()
+        return True
+        
+    if boton_volver.fue_presionado(evento=evento):
+        estado_pantalla = "seleccion_mapa"
+        return True
+        
+    return True
+
 def manejar_configuracion(evento):
     """Se encarga de manejar los eventos de la pantalla de configuración, permitiendo cambiar los controles del juego.
 
@@ -935,7 +969,6 @@ def manejar_configuracion(evento):
         estado_pantalla = "menu"
     
     return True
-
 
 def manejar_puntajes(evento):
     """Se encarga de manejar los eventos de la pantalla de puntajes.
@@ -993,8 +1026,7 @@ def manejar_perdiste(evento):
         iniciar_partida()
         
     return True
-
-    
+   
 def iniciar_interfaz():
     """
     Se encarga de inicializar la interfaz grafica del juego, mostrando el menú principal.
@@ -1036,6 +1068,8 @@ def iniciar_interfaz():
             dibujar_seleccion_tamano()
         elif estado_pantalla == "seleccion_mapa":
             dibujar_seleccion_mapa()
+        elif estado_pantalla == "seleccion_dificultad":
+            dibujar_seleccion_dificultad()
         elif estado_pantalla == "configuracion":
             dibujar_configuracion()
         elif estado_pantalla == "puntajes":
