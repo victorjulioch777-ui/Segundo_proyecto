@@ -3,35 +3,35 @@ import os
 # Nombre del directorio donde se guardarán los puntajes
 DIRECTORIO_DATOS = "datos"
 
-# Rutas completas a los archivos de puntajes, según el tamaño del mapa
-RUTAS_PUNTAJES = {
-    10: os.path.join(DIRECTORIO_DATOS, "top_10x10.txt"),
-    20: os.path.join(DIRECTORIO_DATOS, "top_20x20.txt"),
-    30: os.path.join(DIRECTORIO_DATOS, "top_30x30.txt")
-}
-
-
-def guardar_puntaje(tamano_mapa, puntaje):
+def obtener_ruta_puntajes(dificultad, tamano_mapa):
     """
-    Guarda el puntaje y conserva los mejores veinte por tamaño del mapa.
+    Construye la ruta del archivo combinando dificultad y tamaño.
+    """
+    return os.path.join(DIRECTORIO_DATOS, f"{dificultad}_{tamano_mapa}x{tamano_mapa}.txt")
+
+
+def guardar_puntaje(dificultad, tamano_mapa, puntaje):
+    """
+    Guarda el puntaje y conserva los mejores veinte por dificultad y tamaño del mapa.
     """
     os.makedirs(DIRECTORIO_DATOS, exist_ok=True)
 
-    puntajes = obtener_puntajes(tamano_mapa)
+    puntajes = obtener_puntajes(dificultad, tamano_mapa)
     puntajes.append(puntaje)
     puntajes = sorted(puntajes, reverse=True)[:20]
 
-    with open(RUTAS_PUNTAJES[tamano_mapa], "w", encoding="utf-8") as archivo:
+    ruta = obtener_ruta_puntajes(dificultad, tamano_mapa)
+    with open(ruta, "w", encoding="utf-8") as archivo:
         for valor in puntajes:
             archivo.write(f"{valor}\n")
 
 
-def obtener_puntajes(tamano_mapa):
+def obtener_puntajes(dificultad, tamano_mapa):
     """
-    Lee los puntajes guardados para el tamano seleccionado.
+    Lee los puntajes guardados para la dificultad y tamano seleccionados.
     """
-    ruta = RUTAS_PUNTAJES.get(tamano_mapa)
-    if ruta is None or not os.path.exists(ruta):
+    ruta = obtener_ruta_puntajes(dificultad, tamano_mapa)
+    if not os.path.exists(ruta):
         return []
 
     puntajes = []

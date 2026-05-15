@@ -1,4 +1,4 @@
-from Threats import Threats
+from Threading import Threats
 import time
 from Config import (
     DISMINUCION_TIEMPO,
@@ -29,9 +29,10 @@ class Juego:
     un hilo secundario para asi no bloquear la interfaz gráfica.
     """
 
-    def __init__(self, tamano_mapa, tipo_mapa, porcentaje_obstaculos=0.60):
+    def __init__(self, tamano_mapa, tipo_mapa, porcentaje_obstaculos=0.60, dificultad="medio"):
         self.tamano_mapa = tamano_mapa
         self.tipo_mapa = tipo_mapa
+        self.dificultad = dificultad
         self.mapa = Mapa(tamano_mapa, porcentaje_obstaculos)
         self.jugador = Jugador(fila=tamano_mapa - 1, columna=tamano_mapa // 2, mapa=self.mapa)
         self.bombas = 2
@@ -181,17 +182,23 @@ class Juego:
             c_dest = c_obs + dir_c
 
             # 1. Verificar que al frente haya un obstáculo
-            self.verificarColisionFrontal(f_obs=f_obs, c_obs=c_obs)
+            if not self.verificar_colision_frontal(f_obs=f_obs, c_obs=c_obs):
+                return
 
             # 2. Verificar que la celda de destino esté libre
-            self.verificarDestinoLibre(f_dest=f_dest, c_dest=c_dest)
+            self.verificar_destino_libre(f_dest=f_dest, c_dest=c_dest)
                 
-    def verificarColisionFrontal(self, f_obs, c_obs):
-        if not self._esta_dentro(f_obs, c_obs) or self.mapa.es_posicion_valida(f_obs, c_obs):
-            self.mensaje = "Debes estar frente a un obstáculo para usarlo."
-            return
+    def verificar_colision_frontal(self, f_obs, c_obs):
+        if not self._esta_dentro(f_obs, c_obs): 
+            self.mensaje = "No hay obstáculo dentro del mapa en esa dirección."
+            return False
         
-    def verificarDestinoLibre(self, f_dest, c_dest):
+        if self.mapa.es_posicion_valida(f_obs, c_obs):
+            self.mensaje = "Debes estas frente a un obstáculo para usar el paso fantasma."    
+            return False
+        
+        return True
+    def verificar_destino_libre(self, f_dest, c_dest):
         
             if self._esta_dentro(f_dest, c_dest) and self.mapa.es_posicion_valida(f_dest, c_dest):
                 self.pasos_fantasma -= 1
@@ -259,6 +266,7 @@ class Juego:
                 "pausado": self.pausado,
                 "intervalo": self.intervalo_desplazamiento,
                 "direccion": self.jugador.direccion,
+                "dificultad": self.dificultad,
             }
 
     def _esta_dentro(self, fila, columna):

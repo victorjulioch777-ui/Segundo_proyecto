@@ -147,7 +147,8 @@ class Boton:
         return False
 
 def inicializar_pygame():
-    """Se encarga de inicializar Pygame y todos sus componentes.
+    """
+    Se encarga de inicializar Pygame y todos sus componentes.
     """
     global ventana
     global pantalla
@@ -189,6 +190,9 @@ boton_jugar_otra_vez = None
 boton_dificultad_facil = None
 boton_dificultad_medio = None
 boton_dificultad_dificil = None
+boton_puntajes_facil = None
+boton_puntajes_medio = None
+boton_puntajes_dificil = None
 
 def crear_botones():
     """
@@ -210,6 +214,9 @@ def crear_botones():
     global boton_dificultad_facil
     global boton_dificultad_medio
     global boton_dificultad_dificil
+    global boton_puntajes_facil
+    global boton_puntajes_medio
+    global boton_puntajes_dificil
 
     boton_iniciar = Boton(330, 300, 340, 70, "INICIAR PARTIDA", NARANJA, NARANJA_OSCURO)
     boton_configuracion = Boton(330, 400, 340, 70, "CONFIGURACION", VERDE, VERDE_OSCURO)
@@ -221,6 +228,9 @@ def crear_botones():
     boton_dificultad_facil = Boton(330, 300, 340, 70, "FACIL (20%)", VERDE, VERDE_OSCURO)
     boton_dificultad_medio = Boton(330, 400, 340, 70, "MEDIO (40%)", NARANJA, NARANJA_OSCURO)
     boton_dificultad_dificil = Boton(330, 500, 340, 70, "DIFICIL (60%)", ROJO, (150, 40, 40))
+    boton_puntajes_facil = Boton(200, 130, 180, 50, "FÁCIL", VERDE, VERDE_OSCURO)
+    boton_puntajes_medio = Boton(410, 130, 180, 50, "MEDIO", NARANJA, NARANJA_OSCURO)
+    boton_puntajes_dificil = Boton(620, 130, 180, 50, "DIFÍCIL", ROJO, (150, 40, 40))
     botones_tamano = [
         Boton(240 + indice * 190, 330, 150, 70, f"{tamano} x {tamano}", NARANJA, NARANJA_OSCURO)
         for indice, tamano in enumerate(TAMANOS_MAPA)
@@ -313,7 +323,8 @@ def dibujar_menu():
     boton_salir.dibujar(pantalla)
 
 def dibujar_configuracion():
-    """Se encarga de dibujar el apartado de los controles en configuración.
+    """
+    Se encarga de dibujar el apartado de los controles en configuración.
     """
     dibujar_fondo(pantalla)
     dibujar_texto_con_sombra(pantalla, "CONFIGURACIÓN", fuente_titulo, BLANCO, (ANCHO // 2, 95))
@@ -443,14 +454,25 @@ def dibujar_puntajes():
     Dibuja la pantalla de puntajes.
     """
     dibujar_fondo(pantalla)
-    dibujar_texto_con_sombra(pantalla, "PUNTAJES", fuente_titulo, BLANCO, (ANCHO // 2, 110))
+    dibujar_texto_con_sombra(pantalla, "PUNTAJES", fuente_titulo, BLANCO, (ANCHO // 2, 75))
+
+    boton_puntajes_facil.color = VERDE if dificultad_vista_puntajes == "facil" else GRIS_CLARO
+    boton_puntajes_facil.color_hover = VERDE_OSCURO if dificultad_vista_puntajes == "facil" else GRIS
+    boton_puntajes_medio.color = NARANJA if dificultad_vista_puntajes == "medio" else GRIS_CLARO
+    boton_puntajes_medio.color_hover = NARANJA_OSCURO if dificultad_vista_puntajes == "medio" else GRIS
+    boton_puntajes_dificil.color = ROJO if dificultad_vista_puntajes == "dificil" else GRIS_CLARO
+    boton_puntajes_dificil.color_hover = (150, 40, 40) if dificultad_vista_puntajes == "dificil" else GRIS
+    
+    boton_puntajes_facil.dibujar(pantalla)
+    boton_puntajes_medio.dibujar(pantalla)
+    boton_puntajes_dificil.dibujar(pantalla)
 
     x = 190
     for tamano in TAMANOS_MAPA:
         titulo = fuente_subtitulo.render(f"{tamano} x {tamano}", True, NARANJA)
-        pantalla.blit(titulo, titulo.get_rect(center=(x, 205)))
+        pantalla.blit(titulo, titulo.get_rect(center=(x, 215)))
 
-        puntajes = obtener_puntajes(tamano)
+        puntajes = obtener_puntajes(dificultad_vista_puntajes, tamano)
         if not puntajes:
             puntajes = [0]
 
@@ -459,7 +481,7 @@ def dibujar_puntajes():
             columna = 0 if indice <= 10 else 1
             fila = indice if indice <= 10 else indice - 10
             texto = fuente_texto_pequena.render(f"{indice:02d}. {puntaje}", True, BLANCO)
-            pantalla.blit(texto, texto.get_rect(midleft=(columnas[columna], 225 + fila * 32)))
+            pantalla.blit(texto, texto.get_rect(midleft=(columnas[columna], 235 + fila * 32)))
 
         x += 310
 
@@ -478,15 +500,18 @@ def dibujar_perdiste():
     pantalla.blit(texto, texto.get_rect(center=(ANCHO // 2, 170)))
 
     puntaje = 0
+    dificultad_perdiste = "facil"
     if juego_actual is not None:
-        puntaje = juego_actual.obtener_datos_interfaz()["puntaje"]
+        datos_interfaz = juego_actual.obtener_datos_interfaz()
+        puntaje = datos_interfaz["puntaje"]
+        dificultad_perdiste = datos_interfaz.get("dificultad", "facil")
     texto_puntaje = fuente_subtitulo.render(f"Puntaje final: {puntaje}", True, BLANCO)
     pantalla.blit(texto_puntaje, texto_puntaje.get_rect(center=(ANCHO // 2, 225)))
 
     titulo_top = fuente_subtitulo.render("Top 20 historico", True, NARANJA)
     pantalla.blit(titulo_top, titulo_top.get_rect(center=(ANCHO // 2, 285)))
 
-    puntajes = obtener_puntajes(tamano_mapa)[:20]
+    puntajes = obtener_puntajes(dificultad_perdiste, tamano_mapa)[:20]
     columnas = [330, 670]
     for indice, valor in enumerate(puntajes, start=1):
         columna = 0 if indice <= 10 else 1
@@ -521,7 +546,7 @@ def iniciar_partida():
     elif dificultad == "dificil":
         porcentaje = 0.60
 
-    juego_actual = Juego(tamano_mapa, tipo_mapa, porcentaje)
+    juego_actual = Juego(tamano_mapa, tipo_mapa, porcentaje, dificultad)
     mapa_actual = juego_actual.mapa
     jugador = juego_actual.jugador
     pasos_fantasma = juego_actual.pasos_fantasma
@@ -704,7 +729,8 @@ def finalizar_partida(ir_a_perdiste=False):
     if juego_actual is not None:
         datos = juego_actual.obtener_datos_interfaz()
         if not juego_actual.puntaje_guardado and tamano_mapa is not None:
-            guardar_puntaje(tamano_mapa, datos["puntaje"])
+            dif_guardar = datos.get("dificultad", "facil")
+            guardar_puntaje(dif_guardar, tamano_mapa, datos["puntaje"])
             juego_actual.puntaje_guardado = True
         juego_actual.detener_hilo()
 
@@ -979,9 +1005,15 @@ def manejar_puntajes(evento):
     Returns:
         _type_: Retorna True si el evento fue manejado, False en caso contrario.
     """
-    global estado_pantalla
+    global estado_pantalla, dificultad_vista_puntajes
 
-    if boton_volver.fue_presionado(evento=evento):
+    if boton_puntajes_facil.fue_presionado(evento):
+        dificultad_vista_puntajes = "facil"
+    elif boton_puntajes_medio.fue_presionado(evento):
+        dificultad_vista_puntajes = "medio"
+    elif boton_puntajes_dificil.fue_presionado(evento):
+        dificultad_vista_puntajes = "dificil"
+    elif boton_volver.fue_presionado(evento=evento):
         estado_pantalla = "menu"
 
     return True
@@ -1085,6 +1117,6 @@ def iniciar_interfaz():
 
         presentar_pantalla()
         pygame.display.flip()
-        reloj.tick(5)
+        reloj.tick(60)
 
     pygame.quit()

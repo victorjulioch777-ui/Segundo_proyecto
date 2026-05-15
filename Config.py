@@ -17,7 +17,7 @@ INTERVALO_AUMENTO_DIFICULTAD = 15.0
 DISMINUCION_TIEMPO = 0.1
 
 # El mínimo intervalo de tiempo al que puede llegar el desplazamiento (máxima velocidad)
-MINIMO_INTERVALO_DESPLAZAMIENTO = 0.5
+MINIMO_INTERVALO_DESPLAZAMIENTO = 0.1
 
 # Tiempo de aparición de nuevos elementos (monedas,bombas y pasos fantasmales) en segundos
 INTERVALO_APARICION_ELEMENTOS = 5.0
@@ -50,10 +50,10 @@ COLOR_PASO_FANTASMA = "#DA70D6" # Orquídea/Morado claro
 COLOR_TEXTO = "#FFFFFF"        # Blanco para textos informativos
 
 CONTROLES = {
-    "arriba": {"nombre": "Mover arriba", "tecla": pygame.K_w},
-    "abajo": {"nombre": "Mover abajo", "tecla": pygame.K_s},
-    "izquierda": {"nombre": "Mover izquierda", "tecla": pygame.K_a},
-    "derecha": {"nombre": "Mover derecha", "tecla": pygame.K_d},
+    "arriba": {"nombre": "Mover arriba", "tecla": pygame.K_UP},
+    "abajo": {"nombre": "Mover abajo", "tecla": pygame.K_DOWN},
+    "izquierda": {"nombre": "Mover izquierda", "tecla": pygame.K_LEFT},
+    "derecha": {"nombre": "Mover derecha", "tecla": pygame.K_RIGHT},
     "bomba": {"nombre": "Usar bomba", "tecla": pygame.K_1},
     "fantasma": {"nombre": "Usar paso fantasma", "tecla": pygame.K_2},
 }   
@@ -76,6 +76,7 @@ estado_pantalla = "menu"
 tamano_mapa = None
 tipo_mapa = None
 dificultad = None
+dificultad_vista_puntajes = "facil"
 pantalla_completa = False
 juego_actual = None
 mapa_actual = None
