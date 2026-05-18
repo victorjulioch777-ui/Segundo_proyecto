@@ -1,9 +1,35 @@
+import os
+
 import pygame
 
 from Juego import Juego
 from Puntajes import guardar_puntaje, obtener_puntajes
 
 from Config import *
+
+DIRECTORIO_SONIDOS = os.path.join(os.path.dirname(__file__), "Sonidos")
+MUSICA_MAPAS = {
+    "piedra": "Pixel-City-Cruising.ogg",
+    "arena": "Spies.ogg",
+    "hielo": "Nighttime-Escape_v001_LoFi1.ogg",
+}
+ARCHIVOS_SONIDOS_ACCION = {
+    "moneda": "coin.flac",
+    "poder": "Power Up.wav",
+    "bomba": "click.wav",
+    "fantasma": "TailWhip.flac",
+    "perder": "explosion.wav",
+    "click": "click.wav",
+}
+DURACION_SONIDOS_ACCION = {
+    "moneda": 900,
+    "poder": 1200,
+    "bomba": 700,
+    "fantasma": 900,
+    "click": 500,
+}
+audio_disponible = False
+sonidos_accion = {}
 
 def color_hex(valor):
     """
@@ -143,7 +169,10 @@ class Boton:
             _type_: Retorna un booleano si el boton fue presionado.
         """
         if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
-            return self.rect.collidepoint(posicion_en_lienzo(evento.pos))
+            presionado = self.rect.collidepoint(posicion_en_lienzo(evento.pos))
+            if presionado:
+                reproducir_sonido_accion("click")
+            return presionado
         return False
 
 def inicializar_pygame():
@@ -158,8 +187,18 @@ def inicializar_pygame():
     global fuente_boton
     global fuente_texto
     global fuente_texto_pequena
+    global audio_disponible
+    global sonidos_accion
 
     pygame.init()
+    try:
+        if not pygame.mixer.get_init():
+            pygame.mixer.init()
+        audio_disponible = True
+        sonidos_accion = cargar_sonidos_accion()
+    except pygame.error:
+        audio_disponible = False
+        sonidos_accion = {}
     
     # Se encarga de permitir que al mantener presionada una tecla, se repita la acción cada cierto tiempo.
     pygame.key.set_repeat(300, 150)
@@ -174,6 +213,94 @@ def inicializar_pygame():
     fuente_boton = pygame.font.SysFont("arialblack", 28)
     fuente_texto = pygame.font.SysFont("arial", 26)
     fuente_texto_pequena = pygame.font.SysFont("arial", 22)
+
+def reproducir_musica_mapa(tipo):
+    """
+    Reproduce en bucle la musica correspondiente al mapa seleccionado.
+    """
+    if not audio_disponible:
+        return
+
+    archivo = MUSICA_MAPAS.get(tipo)
+    if archivo is None:
+        pygame.mixer.music.stop()
+        return
+
+    ruta = os.path.join(DIRECTORIO_SONIDOS, archivo)
+    if not os.path.exists(ruta):
+        return
+
+    try:
+        pygame.mixer.music.load(ruta)
+        pygame.mixer.music.play(-1)
+    except pygame.error:
+        pass
+
+def detener_musica_mapa():
+    """
+    Detiene cualquier musica de mapa que este sonando.
+    """
+    if audio_disponible:
+        pygame.mixer.music.stop()
+
+def cargar_sonidos_accion():
+    """
+    Carga los efectos cortos usados por las acciones del juego.
+    """
+    sonidos = {}
+    for nombre, archivo in ARCHIVOS_SONIDOS_ACCION.items():
+        ruta = os.path.join(DIRECTORIO_SONIDOS, archivo)
+        if not os.path.exists(ruta):
+            continue
+        try:
+            sonidos[nombre] = pygame.mixer.Sound(ruta)
+        except pygame.error:
+            continue
+    return sonidos
+
+def reproducir_sonido_accion(nombre):
+    """
+    Reproduce un efecto corto sin interrumpir la musica de fondo.
+    """
+    if not audio_disponible:
+        return
+
+    sonido = sonidos_accion.get(nombre)
+    if sonido is not None:
+        sonido.stop()
+        sonido.play(loops=0, maxtime=DURACION_SONIDOS_ACCION.get(nombre, 0))
+
+def detener_sonidos_accion():
+    """
+    Detiene todos los efectos cortos que esten sonando.
+    """
+    if audio_disponible:
+        pygame.mixer.stop()
+
+def actualizar_sonidos_juego():
+    """
+    Detecta cambios importantes de la partida y reproduce efectos cortos.
+    """
+    global ultimo_datos_sonido
+
+    if juego_actual is None or estado_pantalla != "juego":
+        ultimo_datos_sonido = None
+        return
+
+    datos = juego_actual.obtener_datos_interfaz()
+    if ultimo_datos_sonido is None:
+        ultimo_datos_sonido = datos
+        return
+
+    if datos["puntaje"] > ultimo_datos_sonido["puntaje"]:
+        reproducir_sonido_accion("moneda")
+    elif (
+        datos["bombas"] > ultimo_datos_sonido["bombas"]
+        or datos["pasos_fantasma"] > ultimo_datos_sonido["pasos_fantasma"]
+    ):
+        reproducir_sonido_accion("poder")
+
+    ultimo_datos_sonido = datos
 
 boton_iniciar = None
 boton_configuracion = None
@@ -193,6 +320,7 @@ boton_dificultad_dificil = None
 boton_puntajes_facil = None
 boton_puntajes_medio = None
 boton_puntajes_dificil = None
+ultimo_datos_sonido = None
 
 def crear_botones():
     """
@@ -534,9 +662,13 @@ def iniciar_partida():
     global pasos_fantasma
     global bombas_disponibles
     global ultimo_desplazamiento
+    global ultimo_datos_sonido
 
     if juego_actual is not None:
         juego_actual.detener_hilo()
+    detener_sonidos_accion()
+    detener_musica_mapa()
+    ultimo_datos_sonido = None
 
     porcentaje = 0.60
     if dificultad == "facil":
@@ -553,6 +685,7 @@ def iniciar_partida():
     bombas_disponibles = juego_actual.bombas
     ultimo_desplazamiento = pygame.time.get_ticks()
     mensaje_juego = juego_actual.mensaje
+    reproducir_musica_mapa(tipo_mapa)
     juego_actual.iniciar_hilo()
     estado_pantalla = "juego"
 
@@ -576,9 +709,17 @@ def manejar_movimiento(tecla):
     if tecla in movimientos:
         ultimo_movimiento_tecla = tecla
     elif tecla == CONTROLES["bomba"]["tecla"]:
+        datos_antes = juego_actual.obtener_datos_interfaz()
         juego_actual.lanzar_bomba()
+        datos_despues = juego_actual.obtener_datos_interfaz()
+        if datos_despues["bombas"] < datos_antes["bombas"]:
+            reproducir_sonido_accion("bomba")
     elif tecla == CONTROLES["fantasma"]["tecla"]:
+        datos_antes = juego_actual.obtener_datos_interfaz()
         juego_actual.activar_paso_fantasma()
+        datos_despues = juego_actual.obtener_datos_interfaz()
+        if datos_despues["pasos_fantasma"] < datos_antes["pasos_fantasma"]:
+            reproducir_sonido_accion("fantasma")
 
 def dibujar_juego():
     """
@@ -725,6 +866,7 @@ def finalizar_partida(ir_a_perdiste=False):
     Detiene la partida actual y guarda el puntaje una unica vez.
     """
     global estado_pantalla
+    global ultimo_datos_sonido
 
     if juego_actual is not None:
         datos = juego_actual.obtener_datos_interfaz()
@@ -734,6 +876,11 @@ def finalizar_partida(ir_a_perdiste=False):
             juego_actual.puntaje_guardado = True
         juego_actual.detener_hilo()
 
+    detener_sonidos_accion()
+    detener_musica_mapa()
+    if ir_a_perdiste:
+        reproducir_sonido_accion("perder")
+    ultimo_datos_sonido = None
     estado_pantalla = "perdiste" if ir_a_perdiste else "menu"
 
 def asignar_control(accion, tecla):
@@ -944,6 +1091,7 @@ def manejar_seleccion_mapa(evento):
     posicion = posicion_en_lienzo(evento.pos)
     for tarjeta in tarjetas_mapa:
         if tarjeta["rect"].collidepoint(posicion):
+            reproducir_sonido_accion("click")
             tipo_mapa = tarjeta.get("tipo", None)
             estado_pantalla = "seleccion_dificultad"
             break
@@ -1053,6 +1201,8 @@ def manejar_perdiste(evento):
     if boton_volver_perdiste.fue_presionado(evento=evento):
         if juego_actual is not None:
             juego_actual.detener_hilo()
+        detener_sonidos_accion()
+        detener_musica_mapa()
         estado_pantalla = "menu"
     elif boton_jugar_otra_vez.fue_presionado(evento=evento):
         iniciar_partida()
@@ -1093,6 +1243,8 @@ def iniciar_interfaz():
             if ultimo_movimiento_tecla in movimientos:
                 cambio_fila, cambio_columna = movimientos[ultimo_movimiento_tecla]
                 juego_actual.mover_jugador(cambio_fila, cambio_columna)
+
+        actualizar_sonidos_juego()
 
         if estado_pantalla == "menu":
             dibujar_menu()
